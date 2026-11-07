@@ -6,7 +6,7 @@ import java.util.Objects;
 
 public class Country implements Identifiable<Short> {
     //Atributos
-    private final Short id;
+    private final Short id; //se declara final porque no tiene setter
     private String name;
 
     //Constructor

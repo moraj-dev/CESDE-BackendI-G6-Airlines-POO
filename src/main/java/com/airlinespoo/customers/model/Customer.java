@@ -21,6 +21,11 @@ public class Customer implements Identifiable<String> {
     public Customer (String id, String firstName, String lastName, DocumentType documentType, String telephoneNumber, Country country ){
         this.id = Validator.requireText(id, "documento", 20);
 
+        setFirstName(firstName);
+        setLastName(lastName);
+        setDocumentType(documentType);
+        setTelephoneNumber(telephoneNumber);
+        setCountry(country);
     }
 
     //Métodos
@@ -56,6 +61,7 @@ public class Customer implements Identifiable<String> {
         return lastName;
     }
 
+    //Metodo que devuelve el nombre completo
     public String getFullName(){
         return firstName + " " + lastName;
     }
@@ -82,23 +88,24 @@ public class Customer implements Identifiable<String> {
 
     //Setters
     public void setFirstName(String firstName){
-        this.firstName = Validator.requireText(firstName, "nombre", 30);
+        this.firstName = Validator.requireText(firstName, "Nombre", 30);
     }
 
     public void setLastName (String lastName){
-        this.lastName = Validator.requireText(lastName, "apellido", 30);
+        this.lastName = Validator.requireText(lastName, "Apellido", 30);
     }
 
     public void setDocumentType (DocumentType documentType){
-        this.documentType = Validator.requireNotNull(documentType, "tipo de documento");
+        this.documentType = Validator.requireNotNull(documentType, "Tipo de Documento");
     }
 
     public void  setCountry(Country country){
-        this.country = Validator.requireNotNull(country, "país");
+        this.country = Validator.requireNotNull(country, "País");
     }
 
     public void setTelephoneNumber (String telephoneNumber){
-        String validPhone = Validator.requireText(telephoneNumber, " teléfono", 15);
+        String validPhone = Validator.requireText(telephoneNumber, " Teléfono", 15);
+        //Verificación del número de telefono, con opción de que contenga un '+' al inicio
         if (!validPhone.matches("^\\+?[0-9]+$")){
             throw new ValidationException("El teléfono solo debe contener digitos, opcionalmente un '+' al inicio");
         }
@@ -110,6 +117,7 @@ public class Customer implements Identifiable<String> {
         if (normalizedEmail != null && !normalizedEmail.isEmpty()){
             Validator.requireMaxLength(normalizedEmail, 80, "correo");
 
+            //Validación del formato del correo
             if(!normalizedEmail.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")){
                 throw new ValidationException("El formato del correo no es válido");
             }
@@ -122,7 +130,7 @@ public class Customer implements Identifiable<String> {
     public void setAddress (String address){
         String normalizedAddress = Validator.normalize(address);
         if (normalizedAddress != null && !normalizedAddress.isEmpty()){
-            Validator.requireMaxLength(normalizedAddress, 40, "dirección");
+            Validator.requireMaxLength(normalizedAddress, 40, "Dirección");
             this.address = normalizedAddress;
         }else {
             this.address = null;
