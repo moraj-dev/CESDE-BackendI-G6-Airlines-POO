@@ -28,7 +28,7 @@ public class CustomerSampleData {
         //2. Crear y guardar 4 tipos de documento
         DocumentType cc = new DocumentType("CC", "Cédula de Ciudadanía");
         DocumentType ti = new DocumentType("TI", "Tarjeta de Identidad");
-        DocumentType ce = new DocumentType("CE", "Cédula de Extranjería");
+        DocumentType ce = new DocumentType("CE", "Cédula Extranjería");
         DocumentType pa = new DocumentType("PA", "Pasaporte");
 
         service.createDocumentType(cc);

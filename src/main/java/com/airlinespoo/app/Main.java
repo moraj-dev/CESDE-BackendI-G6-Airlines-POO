@@ -1,5 +1,13 @@
 package com.airlinespoo.app;
 
+import com.airlinespoo.core.ui.ConsoleInput;
+import com.airlinespoo.customers.CustomerSampleData;
+import com.airlinespoo.customers.repository.CountryRepository;
+import com.airlinespoo.customers.repository.CustomerRepository;
+import com.airlinespoo.customers.repository.DocumentTypeRepository;
+import com.airlinespoo.customers.service.CustomerService;
+import com.airlinespoo.customers.ui.CustomerMenu;
+
 /**
  * Punto de entrada de Airlines-poo.
  *
@@ -24,5 +32,32 @@ public final class Main {
         System.out.println("Proyecto base listo. El kit base (paquete core) está disponible.");
         System.out.println("Cada módulo se integra en develop mediante Pull Request.");
         // TODO (Módulo 3): ensamblar aquí lector, generadores, repositorios, servicios y menús.
+
+        //MENU MODULO 1-CUSTOMER
+        //Instancia de la herramienta de consola
+        ConsoleInput console = new ConsoleInput();
+
+        //Instancia de los repositorios de la base de datos en memoria
+        CountryRepository countryRepository = new CountryRepository();
+        DocumentTypeRepository documentTypeRepository = new DocumentTypeRepository();
+        CustomerRepository customerRepository = new CustomerRepository();
+
+        //Instancia del servicio
+        CustomerService customerService = new CustomerService(
+            countryRepository,
+            documentTypeRepository,
+            customerRepository);
+
+        //Carga los datos de prueba
+        CustomerSampleData.load (customerService);
+
+        //Instancia el menú del módulo 1. Customer
+        CustomerMenu customerMenu = new CustomerMenu (customerService, console);
+
+        //Correr la interfaz
+        customerMenu.run();
+
+        System.out.println("Sistema cerrado");
     }
 }
+

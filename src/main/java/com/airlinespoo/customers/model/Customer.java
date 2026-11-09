@@ -105,6 +105,12 @@ public class Customer implements Identifiable<String> {
 
     public void setTelephoneNumber (String telephoneNumber){
         String validPhone = Validator.requireText(telephoneNumber, " Teléfono", 15);
+
+        //Validación de longitud mínima.
+        if (validPhone.length() < 7) {
+            throw new ValidationException("El número de teléfono debe tener al menos 7 dígitos.");
+        }
+
         //Verificación del número de telefono, con opción de que contenga un '+' al inicio
         if (!validPhone.matches("^\\+?[0-9]+$")){
             throw new ValidationException("El teléfono solo debe contener digitos, opcionalmente un '+' al inicio");

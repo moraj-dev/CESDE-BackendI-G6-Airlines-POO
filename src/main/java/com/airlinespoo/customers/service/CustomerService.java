@@ -10,6 +10,7 @@ import com.airlinespoo.customers.repository.CountryRepository;
 import com.airlinespoo.customers.repository.CustomerRepository;
 import com.airlinespoo.customers.repository.DocumentTypeRepository;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -121,8 +122,9 @@ public class CustomerService {
 
     //Lista de clientes ordenada por apellido y nombre
     public List<Customer> listCustomer(){
-        List<Customer> customers = customerRepository.findAll();
-        customers.sort(Comparator.comparing(Customer::getLastName).thenComparing(Customer::getFirstName));
+        List<Customer> customers = new ArrayList<>(customerRepository.findAll());
+        customers.sort(Comparator.comparing(Customer::getLastName, String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(Customer::getFirstName, String.CASE_INSENSITIVE_ORDER));
         return customers;
     }
 

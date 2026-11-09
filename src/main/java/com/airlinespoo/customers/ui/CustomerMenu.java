@@ -33,18 +33,24 @@ public class CustomerMenu implements Menu {
         boolean salir = false;
         //Menu
         while (!salir){
-            System.out.println("\n=== " + title().toUpperCase() + " ===");
             System.out.println("1. Registrar Cliente");
             System.out.println("2. Consultar cliente por documento");
             System.out.println("3. Actualizar contacto de cliente");
             System.out.println("4. Listar todos los clientes");
             System.out.println("5. Buscar clientes por apellido");
             System.out.println("6. Eliminar cliente");
-            System.out.println("7. Salir");
+            System.out.println("7. Registrar nuevo País");
+            System.out.println("8. Listar Países");
+            System.out.println("9. Listar Tipos de Documento");
+            System.out.println("10. Registrar nuevo tipo de Documento");
+            System.out.println("11. Ver total de clientes registrados");
+            System.out.println("12. Buscar clientes por País");
+            System.out.println("13. Buscar clientes por Tipo de Documento");
+            System.out.println("14. Salir");
 
-            int option = consoleInput.readInt("Selecciona una opción: ", 1, 7);
+            // Aumentamos el límite de opciones a 10
+            int option = consoleInput.readInt("Selecciona una opción: ", 1, 14);
 
-            //try - catch para la opcion seleccionada
             try {
                 switch (option){
                     case 1 -> registrarCliente();
@@ -52,11 +58,18 @@ public class CustomerMenu implements Menu {
                     case 3 -> actualizarContacto();
                     case 4 -> listarClientes();
                     case 5 -> buscarPorApellido();
-                    case 6 -> eliminarCliente ();
-                    case 7 -> salir = true;
+                    case 6 -> eliminarCliente();
+                    case 7 -> registrarPais();
+                    case 8 -> mostrarCountries();
+                    case 9 -> mostrarDocumentType();
+                    case 10 -> registrarTipoDocumento();
+                    case 11 -> countCustomers();
+                    case 12 -> listarPorPais();
+                    case 13 -> listarPorTipoDocumento();
+                    case 14 -> salir = true;
                 }
-            }catch (AirlinesException exception){
-                System.out.println("❌ Error de regla de negocio " + exception.getMessage());
+            } catch (AirlinesException exception){
+                System.out.println("❌ Error  " + exception.getMessage());
             }catch (Exception exception){
                 System.out.println("❌ Error inesperado: " + exception.getMessage());
             }
@@ -76,7 +89,7 @@ public class CustomerMenu implements Menu {
 
         mostrarDocumentType();
         String documentTypeId = consoleInput.readRequiredText("Ingrese el tipo de documento, ej: 'CC', 'TI'.");
-        DocumentType documentType = customerService.getDocumentType(documentTypeId);
+        DocumentType documentType = customerService.getDocumentType(documentTypeId.toUpperCase());
         String id = consoleInput.readRequiredText("Ingrese el documento de Identidad del cliente");
 
         String telephone = consoleInput.readRequiredText("Ingrese el número de telefono del cliente");
@@ -161,8 +174,10 @@ public class CustomerMenu implements Menu {
 
         if (results.isEmpty()){
             System.out.println("No se encontró ninguna coincidencia con: " + lastName + ".");
+        } else {
+            System.out.println("Resultados encontrados:");
             for (Customer c : results){
-                System.out.println(c.toString());
+                System.out.println(c.toString() + " | Correo: " + (c.getEmail() != null ? c.getEmail() : "N/A"));
             }
         }
     }
@@ -184,7 +199,29 @@ public class CustomerMenu implements Menu {
         }
     }
 
-    //Metodo para mostrar el tipo de documento
+    //Opcion 7. Registrar un nuevo país en el catálogo
+    private void registrarPais(){
+        System.out.println("\n-- REGISTRAR NUEVO PAÍS --");
+
+        // El ID numérico suele requerirse mayor a 0
+        short id = (short) consoleInput.readInt("Ingrese el código numérico del nuevo país", 1, Short.MAX_VALUE);
+        String name = consoleInput.readRequiredText("Ingrese el nombre del país");
+
+        Country newCountry = new Country(id, name);
+
+        customerService.createCountry(newCountry);
+        System.out.println("✅ País registrado con éxito.");
+    }
+
+    //Opcion 8. Listar Paises
+    private void mostrarCountries(){
+        System.out.println("\nPaíses disponibles:");
+        for (Country c : customerService.listCountries()){
+            System.out.println(" - ID: " + c.getId() + " | " + c.getName());
+        }
+    }
+
+    //Opcion 9. Metodo para mostrar el tipo de documento
     private void mostrarDocumentType(){
         System.out.println("\nTipos de documento disponibles:");
         for (DocumentType dt : customerService.listDocumentTypes()){
@@ -192,11 +229,59 @@ public class CustomerMenu implements Menu {
         }
     }
 
-    //Metodo para mostrar paises
-    private void mostrarCountries(){
-        System.out.println("\nPaíses disponibles:");
-        for (Country c : customerService.listCountries()){
-            System.out.println(" - ID: " + c.getId() + " | " + c.getName());
+    // Opcion 10. Registrar un nuevo tipo de documento
+    private void registrarTipoDocumento(){
+        System.out.println("\n-- REGISTRAR NUEVO TIPO DE DOCUMENTO --");
+
+        String id = consoleInput.readRequiredText("Ingrese el código del tipo de documento (exactamente 2 letras, ej: 'CC', 'TI')");
+        String description = consoleInput.readRequiredText("Ingrese la descripción (ej: 'Cédula de Ciudadanía')");
+
+        // Pasamos el ID a mayúsculas para asegurar la regla de normalización desde la captura
+        DocumentType newDocType = new DocumentType(id.toUpperCase(), description);
+
+        customerService.createDocumentType(newDocType);
+        System.out.println("✅ Tipo de documento registrado con éxito.");
+    }
+
+    // Opcion 11.: Mostrar total de clientes
+    private void countCustomers(){
+        long total = customerService.countCustomers();
+        System.out.println("\n📊 Total de clientes registrados en el sistema: " + total);
+    }
+
+    // Opcion 12: Listar clientes por un país específico
+    private void listarPorPais(){
+        System.out.println("\n-- CLIENTES POR PAÍS --");
+        mostrarCountries();
+        short countryId = (short) consoleInput.readInt("Ingrese el Id numérico del país a consultar", 1, Short.MAX_VALUE);
+
+        // Asumiendo que codificaste listCustomersByCountry en tu servicio
+        List<Customer> byCountry = customerService.listCustomerByCountry(countryId);
+
+        if (byCountry.isEmpty()){
+            System.out.println("No hay clientes registrados en este país.");
+        } else {
+            for (Customer c : byCountry){
+                System.out.println(c.toString());
+            }
+        }
+    }
+
+    // Opcion 13: Listar clientes por tipo de documento
+    private void listarPorTipoDocumento(){
+        System.out.println("\n-- CLIENTES POR TIPO DE DOCUMENTO --");
+        mostrarDocumentType();
+        String docType = consoleInput.readRequiredText("Ingrese el código del tipo de documento (ej: CC)");
+
+        // Asumiendo que codificaste listCustomersByDocumentType en tu servicio
+        List<Customer> porTipo = customerService.listCustomerByDocumentType(docType.toUpperCase());
+
+        if (porTipo.isEmpty()){
+            System.out.println("No hay clientes registrados con este tipo de documento.");
+        } else {
+            for (Customer c : porTipo){
+                System.out.println(c.toString());
+            }
         }
     }
 }

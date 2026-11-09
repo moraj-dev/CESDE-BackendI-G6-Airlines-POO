@@ -27,7 +27,7 @@ public class Country implements Identifiable<Short> {
     }
 
     @Override
-    public int hashcode(){
+    public int hashCode(){
         return Objects.hash(id);
     }
 
