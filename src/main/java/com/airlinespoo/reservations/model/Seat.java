@@ -1,5 +1,6 @@
 package com.airlinespoo.reservations.model;
 
+import java.util.Objects;
 import java.util.Locale;
 
 public class Seat {
@@ -35,6 +36,21 @@ public class Seat {
     public int getSeatNumber() {
         return seatNumber;
     }
+
+    @Override
+public boolean equals(Object other) {
+    if (!(other instanceof Seat otherSeat)) {
+        return false;
+    }
+
+    return rowNumber.equals(otherSeat.rowNumber)
+            && seatNumber == otherSeat.seatNumber;
+}
+
+@Override
+public int hashCode() {
+    return Objects.hash(rowNumber, seatNumber);
+}
 
     
 
