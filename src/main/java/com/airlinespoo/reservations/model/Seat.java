@@ -28,6 +28,14 @@ public class Seat {
     this.seatNumber = seatNumber;
 }
 
+    public String getRowNumber() {
+        return rowNumber;
+    }
+
+    public int getSeatNumber() {
+        return seatNumber;
+    }
+
     
 
 
