@@ -61,6 +61,27 @@ public class ReservationDetail {
         return seat;
     }
 
+        @Override
+    public boolean equals(Object other) {
+        if (!(other instanceof ReservationDetail otherDetail)) {
+            return false;
+        }
+
+        return id == otherDetail.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Integer.hashCode(id);
+    }
+
+    @Override
+    public String toString() {
+        return "Detalle " + id + " | " + passengerFullName
+                + " | Fila " + seat.getRowNumber()
+                + ", silla " + seat.getSeatNumber();
+    }
+
  
 
 
