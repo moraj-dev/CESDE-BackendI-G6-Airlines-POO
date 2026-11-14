@@ -10,7 +10,7 @@ public class ReservationDetail {
     private final Seat seat;
 
     public ReservationDetail(int id, String passengerFullName,
-                             String passengerDocument, Seat seat) {
+        String passengerDocument, Seat seat) {
         if (id < 1) {
             throw new IllegalArgumentException("El ID del detalle debe ser positivo.");
         }
@@ -43,6 +43,27 @@ public class ReservationDetail {
         this.passengerDocument = document;
         this.seat = seat;
     }
+
+
+     public int getId() {
+        return id;
+    }
+
+    public String getPassengerFullName() {
+        return passengerFullName;
+    }
+
+    public String getPassengerDocument() {
+        return passengerDocument;
+    }
+
+    public Seat getSeat() {
+        return seat;
+    }
+
+ 
+
+
 
     
 }
