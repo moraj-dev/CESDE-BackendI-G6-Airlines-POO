@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.Locale;
 
 public class Seat {
-    private static final  int MAX_SEAT_NUMBER = 99;
+    private static final  int MAX_SEAT_NUMBER = 77;
     final private  String rowNumber;
     final private int seatNumber;
 
