@@ -82,9 +82,4 @@ public class ReservationDetail {
                 + ", silla " + seat.getSeatNumber();
     }
 
- 
-
-
-
-    
 }
