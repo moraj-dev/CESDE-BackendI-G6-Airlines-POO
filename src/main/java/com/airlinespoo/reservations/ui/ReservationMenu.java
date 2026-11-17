@@ -23,6 +23,8 @@ import java.util.List;
  */
 public class ReservationMenu implements Menu {
 
+    private static final int MAX_SEAT_NUMBER = 77;
+
     private final ReservationService reservationService;
     private final CustomerService customerService;
     private final ConsoleInput input;
@@ -104,7 +106,7 @@ public class ReservationMenu implements Menu {
             Reservation reservation = reservationService.createReservation(customer.getId(), flightId, passengerRequests);
             System.out.println("\n¡Reserva registrada con éxito!");
             printReservationSummary(reservation);
-        } catch (AirlinesException e) {
+        } catch (AirlinesException | IllegalArgumentException e) {
             System.out.println("ERROR: " + e.getMessage());
         }
         input.pause();
@@ -121,7 +123,7 @@ public class ReservationMenu implements Menu {
             ReservationDetail detail = reservationService.addPassenger(reservationId, fullName, document, seat);
             System.out.println("\n¡Pasajero agregado con éxito!");
             System.out.println("Detalle generado: " + detail);
-        } catch (AirlinesException e) {
+        } catch (AirlinesException | IllegalArgumentException e) {
             System.out.println("ERROR: " + e.getMessage());
         }
         input.pause();
@@ -139,7 +141,7 @@ public class ReservationMenu implements Menu {
             } else {
                 System.out.println("Operación cancelada.");
             }
-        } catch (AirlinesException e) {
+        } catch (AirlinesException | IllegalArgumentException e) {
             System.out.println("ERROR: " + e.getMessage());
         }
         input.pause();
@@ -154,8 +156,8 @@ public class ReservationMenu implements Menu {
             Seat newSeat = readSeatFromConsole();
 
             reservationService.changeSeat(reservationId, document, newSeat);
-            System.out.println("¡Silla actualizada con éxito a: " + newSeat + "!");
-        } catch (AirlinesException e) {
+            System.out.println("¡Silla actualizada con éxito a: " + ManifestEntry.formatSeat(newSeat) + "!");
+        } catch (AirlinesException | IllegalArgumentException e) {
             System.out.println("ERROR: " + e.getMessage());
         }
         input.pause();
@@ -174,7 +176,7 @@ public class ReservationMenu implements Menu {
             } else {
                 System.out.println("Cancelación abortada.");
             }
-        } catch (AirlinesException e) {
+        } catch (AirlinesException | IllegalArgumentException e) {
             System.out.println("ERROR: " + e.getMessage());
         }
         input.pause();
@@ -193,7 +195,7 @@ public class ReservationMenu implements Menu {
                     printReservationSummary(res);
                 }
             }
-        } catch (AirlinesException e) {
+        } catch (AirlinesException | IllegalArgumentException e) {
             System.out.println("ERROR: " + e.getMessage());
         }
         input.pause();
@@ -222,9 +224,9 @@ public class ReservationMenu implements Menu {
                 System.out.println("Todas las sillas están disponibles para el vuelo #" + flightId);
             } else {
                 System.out.printf("Sillas ocupadas en el vuelo #%d (%d sillas):%n", flightId, occupied.size());
-                System.out.println(String.join(", ", occupied.stream().map(Seat::toString).toList()));
+                System.out.println(String.join(", ", occupied.stream().map(ManifestEntry::formatSeat).toList()));
             }
-        } catch (AirlinesException e) {
+        } catch (AirlinesException | IllegalArgumentException e) {
             System.out.println("ERROR: " + e.getMessage());
         }
         input.pause();
@@ -246,7 +248,7 @@ public class ReservationMenu implements Menu {
                 System.out.println("|-" + "-".repeat(6) + "-|-" + "-".repeat(16) + "-|-" + "-".repeat(32) + "-|-" + "-".repeat(11) + "-|");
                 for (ManifestEntry entry : manifest) {
                     System.out.printf("| %-6s | %-16s | %-32s | %-11d |%n",
-                            entry.seat(),
+                            ManifestEntry.formatSeat(entry.seat()),
                             entry.passengerDocument(),
                             entry.passengerFullName(),
                             entry.reservationId());
@@ -254,7 +256,7 @@ public class ReservationMenu implements Menu {
                 System.out.println("=".repeat(78));
                 System.out.printf("Total de pasajeros confirmados a bordo: %d%n", manifest.size());
             }
-        } catch (AirlinesException e) {
+        } catch (AirlinesException | IllegalArgumentException e) {
             System.out.println("ERROR: " + e.getMessage());
         }
         input.pause();
@@ -262,7 +264,7 @@ public class ReservationMenu implements Menu {
 
     private Seat readSeatFromConsole() {
         String row = input.readRequiredText("Fila (ej. 1, 12, A)");
-        int number = input.readInt("Número de asiento", 1, Seat.MAX_SEAT_NUMBER);
+        int number = input.readInt("Número de asiento", 1, MAX_SEAT_NUMBER);
         return new Seat(row, number);
     }
 
@@ -273,7 +275,7 @@ public class ReservationMenu implements Menu {
         System.out.println("Pasajeros asignados:");
         for (ReservationDetail detail : res.getDetails()) {
             System.out.printf("  * Silla %-4s -> %s (Doc: %s)%n",
-                    detail.getSeat(), detail.getPassengerFullName(), detail.getPassengerDocument());
+                    ManifestEntry.formatSeat(detail.getSeat()), detail.getPassengerFullName(), detail.getPassengerDocument());
         }
     }
 }

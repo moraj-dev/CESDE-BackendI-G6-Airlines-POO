@@ -126,7 +126,7 @@ public class Reservation implements Identifiable<Integer> {
         }
 
         for (ReservationDetail existing : details) {
-            if (existing.getId().equals(detail.getId())) {
+            if (existing.getId() == detail.getId()) {
                 throw new BusinessRuleException(
                         "Ya existe un detalle con el id '%d' en esta reserva.".formatted(detail.getId()));
             }
@@ -138,11 +138,43 @@ public class Reservation implements Identifiable<Integer> {
             if (existing.getSeat().equals(detail.getSeat())) {
                 throw new BusinessRuleException(
                         "La silla '%s' ya está asignada a otro pasajero en esta reserva."
-                                .formatted(detail.getSeat()));
+                                .formatted(ManifestEntry.formatSeat(detail.getSeat())));
             }
         }
 
         details.add(detail);
+    }
+
+    /**
+     * Reemplaza un detalle existente por una nueva instancia inmutable validando unicidad.
+     *
+     * @param detailId  identificador del detalle a reemplazar
+     * @param newDetail nuevo detalle con el mismo id
+     */
+    public void replaceDetail(int detailId, ReservationDetail newDetail) {
+        Validator.requireNotNull(newDetail, "detalle de pasajero");
+        int targetIndex = -1;
+        for (int i = 0; i < details.size(); i++) {
+            ReservationDetail current = details.get(i);
+            if (current.getId() == detailId) {
+                targetIndex = i;
+            } else {
+                if (current.getPassengerDocument().equalsIgnoreCase(newDetail.getPassengerDocument())) {
+                    throw new BusinessRuleException(
+                            "El pasajero con documento '%s' ya está registrado en esta reserva."
+                                    .formatted(newDetail.getPassengerDocument()));
+                }
+                if (current.getSeat().equals(newDetail.getSeat())) {
+                    throw new BusinessRuleException(
+                            "La silla '%s' ya está asignada a otro pasajero en esta reserva."
+                                    .formatted(ManifestEntry.formatSeat(newDetail.getSeat())));
+                }
+            }
+        }
+        if (targetIndex < 0) {
+            throw new BusinessRuleException("No se encontró el detalle #%d en la reserva.".formatted(detailId));
+        }
+        details.set(targetIndex, newDetail);
     }
 
     /**

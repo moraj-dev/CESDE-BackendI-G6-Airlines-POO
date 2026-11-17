@@ -1,43 +1,51 @@
 package com.airlinespoo.reservations.model;
 
-import com.airlinespoo.core.exception.ValidationException;
-import com.airlinespoo.core.model.Identifiable;
-import com.airlinespoo.core.util.Validator;
-
-import java.util.Objects;
-
-/**
- * Representa el detalle de una reserva aérea, asociando a un pasajero con su silla asignada.
- *
- * <p>Equivale a la tabla {@code tblDetailsReservation}.</p>
- */
-public class ReservationDetail implements Identifiable<Integer> {
-
-    public static final int MAX_PASSENGER_NAME_LENGTH = 50;
-    public static final int MAX_PASSENGER_DOCUMENT_LENGTH = 20;
+public class ReservationDetail {
+    private static final int MAX_NAME_LENGTH = 50;
+    private static final int MAX_DOCUMENT_LENGTH = 20;
 
     private final int id;
-    private String passengerFullName;
-    private String passengerDocument;
-    private Seat seat;
+    private final String passengerFullName;
+    private final String passengerDocument;
+    private final Seat seat;
 
-    /**
-     * Crea un nuevo detalle de reserva validando todos sus datos.
-     *
-     * @param id                identificador numérico positivo único
-     * @param passengerFullName nombre completo del pasajero (obligatorio, máx. 50)
-     * @param passengerDocument documento del pasajero (obligatorio, máx. 20, sin espacios)
-     * @param seat              silla asignada (obligatoria)
-     */
-    public ReservationDetail(int id, String passengerFullName, String passengerDocument, Seat seat) {
-        this.id = (int) Validator.requirePositive(id, "id de detalle");
-        setPassengerFullName(passengerFullName);
-        setPassengerDocument(passengerDocument);
-        setSeat(seat);
+    public ReservationDetail(int id, String passengerFullName,
+        String passengerDocument, Seat seat) {
+        if (id < 1) {
+            throw new IllegalArgumentException("El ID del detalle debe ser positivo.");
+        }
+
+        if (passengerFullName == null || passengerFullName.isBlank()) {
+            throw new IllegalArgumentException("El nombre del pasajero es obligatorio.");
+        }
+
+        String name = passengerFullName.strip();
+        if (name.length() > MAX_NAME_LENGTH) {
+            throw new IllegalArgumentException("El nombre admite máximo 50 caracteres.");
+        }
+
+        if (passengerDocument == null || passengerDocument.isBlank()) {
+            throw new IllegalArgumentException("El documento del pasajero es obligatorio.");
+        }
+
+        String document = passengerDocument.strip();
+        if (document.length() > MAX_DOCUMENT_LENGTH || !document.matches("[A-Za-z0-9]+")) {
+            throw new IllegalArgumentException(
+                    "El documento admite máximo 20 caracteres y solo puede tener letras de A a Z y dígitos.");
+        }
+
+        if (seat == null) {
+            throw new IllegalArgumentException("La silla del pasajero es obligatoria.");
+        }
+
+        this.id = id;
+        this.passengerFullName = name;
+        this.passengerDocument = document;
+        this.seat = seat;
     }
 
-    @Override
-    public Integer getId() {
+
+     public int getId() {
         return id;
     }
 
@@ -45,48 +53,33 @@ public class ReservationDetail implements Identifiable<Integer> {
         return passengerFullName;
     }
 
-    public void setPassengerFullName(String passengerFullName) {
-        this.passengerFullName = Validator.requireText(passengerFullName, "nombre completo del pasajero", MAX_PASSENGER_NAME_LENGTH);
-    }
-
     public String getPassengerDocument() {
         return passengerDocument;
-    }
-
-    public void setPassengerDocument(String passengerDocument) {
-        String cleanDoc = Validator.requireText(passengerDocument, "documento del pasajero", MAX_PASSENGER_DOCUMENT_LENGTH);
-        if (cleanDoc.contains(" ")) {
-            throw new ValidationException("El documento del pasajero no puede contener espacios.");
-        }
-        if (!cleanDoc.matches("^[a-zA-Z0-9]+$")) {
-            throw new ValidationException("El documento del pasajero solo puede contener letras y dígitos.");
-        }
-        this.passengerDocument = cleanDoc;
     }
 
     public Seat getSeat() {
         return seat;
     }
 
-    public void setSeat(Seat seat) {
-        this.seat = Validator.requireNotNull(seat, "silla");
-    }
+        @Override
+    public boolean equals(Object other) {
+        if (!(other instanceof ReservationDetail otherDetail)) {
+            return false;
+        }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ReservationDetail that = (ReservationDetail) o;
-        return id == that.id;
+        return id == otherDetail.id;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Integer.hashCode(id);
     }
 
     @Override
     public String toString() {
-        return "Detalle #" + id + " [" + passengerFullName + " (" + passengerDocument + ") - Silla " + seat + "]";
+        return "Detalle " + id + " | " + passengerFullName
+                + " | Fila " + seat.getRowNumber()
+                + ", silla " + seat.getSeatNumber();
     }
+
 }

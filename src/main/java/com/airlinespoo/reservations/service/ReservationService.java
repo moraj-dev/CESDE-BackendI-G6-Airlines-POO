@@ -106,7 +106,8 @@ public class ReservationService {
         for (PassengerRequest req : passengerRequests) {
             if (isSeatOccupied(flight, req.seat())) {
                 throw new BusinessRuleException(
-                        "La silla '%s' ya está ocupada en este vuelo por otra reserva.".formatted(req.seat()));
+                        "La silla '%s' ya está ocupada en este vuelo por otra reserva."
+                                .formatted(ManifestEntry.formatSeat(req.seat())));
             }
         }
 
@@ -136,7 +137,7 @@ public class ReservationService {
 
         if (isSeatOccupied(reservation.getFlight(), seat)) {
             throw new BusinessRuleException(
-                    "La silla '%s' ya está ocupada en este vuelo.".formatted(seat));
+                    "La silla '%s' ya está ocupada en este vuelo.".formatted(ManifestEntry.formatSeat(seat)));
         }
 
         int detailId = detailIdGenerator.next();
@@ -180,12 +181,18 @@ public class ReservationService {
             for (ReservationDetail otherDetail : otherRes.getDetails()) {
                 if (otherDetail.getSeat().equals(newSeat)) {
                     throw new BusinessRuleException(
-                            "La silla '%s' ya está ocupada en este vuelo.".formatted(newSeat));
+                            "La silla '%s' ya está ocupada en este vuelo.".formatted(ManifestEntry.formatSeat(newSeat)));
                 }
             }
         }
 
-        targetDetail.setSeat(newSeat);
+        ReservationDetail updated = new ReservationDetail(
+                targetDetail.getId(),
+                targetDetail.getPassengerFullName(),
+                targetDetail.getPassengerDocument(),
+                newSeat
+        );
+        reservation.replaceDetail(targetDetail.getId(), updated);
         reservationRepository.update(reservation);
     }
 
@@ -197,21 +204,13 @@ public class ReservationService {
                 .orElseThrow(() -> new NotFoundException(
                         "No existe el detalle con id '%d' en la reserva #%d.".formatted(detailId, reservationId)));
 
-        if (!targetDetail.getSeat().equals(newSeat)) {
-            changeSeat(reservationId, targetDetail.getPassengerDocument(), newSeat);
+        if (!targetDetail.getSeat().equals(newSeat) && isSeatOccupied(reservation.getFlight(), newSeat)) {
+            throw new BusinessRuleException(
+                    "La silla '%s' ya está ocupada en este vuelo.".formatted(ManifestEntry.formatSeat(newSeat)));
         }
 
-        if (!targetDetail.getPassengerDocument().equalsIgnoreCase(newDocument.trim())) {
-            boolean duplicate = reservation.getDetails().stream()
-                    .anyMatch(d -> d.getId() != detailId && d.getPassengerDocument().equalsIgnoreCase(newDocument.trim()));
-            if (duplicate) {
-                throw new BusinessRuleException(
-                        "Ya existe otro pasajero con el documento '%s' en esta reserva.".formatted(newDocument));
-            }
-            targetDetail.setPassengerDocument(newDocument);
-        }
-
-        targetDetail.setPassengerFullName(newFullName);
+        ReservationDetail updated = new ReservationDetail(detailId, newFullName, newDocument, newSeat);
+        reservation.replaceDetail(detailId, updated);
         reservationRepository.update(reservation);
     }
 
@@ -242,7 +241,8 @@ public class ReservationService {
         for (ReservationDetail detail : reservation.getDetails()) {
             if (isSeatOccupied(newFlight, detail.getSeat())) {
                 throw new BusinessRuleException(
-                        "La silla '%s' no está disponible en el nuevo vuelo solicitado.".formatted(detail.getSeat()));
+                        "La silla '%s' no está disponible en el nuevo vuelo solicitado."
+                                .formatted(ManifestEntry.formatSeat(detail.getSeat())));
             }
         }
 
@@ -280,7 +280,7 @@ public class ReservationService {
 
     public List<Seat> listOccupiedSeats(Object flight) {
         List<Reservation> flightReservations = reservationRepository.findByFlight(flight);
-        Set<Seat> occupied = new TreeSet<>();
+        Set<Seat> occupied = new TreeSet<>(ManifestEntry.SEAT_COMPARATOR);
         for (Reservation reservation : flightReservations) {
             occupied.addAll(reservation.getSeats());
         }

@@ -173,11 +173,24 @@ class ReservationModuleTest {
         List<ManifestEntry> manifest = service.getFlightManifest(101);
         assertEquals(5, manifest.size());
 
-        assertEquals("1-1", manifest.get(0).seat().toString());
-        assertEquals("1-2", manifest.get(1).seat().toString());
-        assertEquals("2-1", manifest.get(2).seat().toString());
-        assertEquals("10-1", manifest.get(3).seat().toString());
-        assertEquals("12-3", manifest.get(4).seat().toString());
+        assertEquals("1-1", ManifestEntry.formatSeat(manifest.get(0).seat()));
+        assertEquals("1-2", ManifestEntry.formatSeat(manifest.get(1).seat()));
+        assertEquals("2-1", ManifestEntry.formatSeat(manifest.get(2).seat()));
+        assertEquals("10-1", ManifestEntry.formatSeat(manifest.get(3).seat()));
+        assertEquals("12-3", ManifestEntry.formatSeat(manifest.get(4).seat()));
+    }
+
+    @Test
+    @DisplayName("Cambio de silla con ReservationDetail inmutable")
+    void testChangeSeatWithImmutableDetail() {
+        Seat original = new Seat("1", 1);
+        Seat updated = new Seat("5", 3);
+        Reservation reservation = service.createReservation("101010", 101, "Ana Pérez", "101010", original);
+
+        service.changeSeat(reservation.getId(), "101010", updated);
+
+        assertFalse(service.isSeatOccupied(101, original));
+        assertTrue(service.isSeatOccupied(101, updated));
     }
 
     @Test
