@@ -49,7 +49,7 @@ public final class Main {
             customerRepository);
 
         //Carga los datos de prueba
-        CustomerSampleData.load (customerService);
+        //CustomerSampleData.load (customerService);
 
         //Instancia el menú del módulo 1. Customer
         CustomerMenu customerMenu = new CustomerMenu (customerService, console);

@@ -1,4 +1,5 @@
 package com.airlinespoo.customers.model;
+import com.airlinespoo.core.exception.ValidationException;
 import com.airlinespoo.core.model.Identifiable;
 import com.airlinespoo.core.util.Validator;
 
@@ -18,12 +19,23 @@ public class Country implements Identifiable<Short> {
     }
 
     //Métodos
+
+    public static void validCountry (short id, String name){
+        if (id <= 0){
+            throw new ValidationException("El ID del país debe ser un número positivo");
+        }
+
+        String validName = Validator.requireText(name, "Nombre del país", 50);
+        if (validName.trim().length() < 2) {
+            throw new ValidationException("El nombre del país debe tener al menos dos caracteres");
+        }
+    }
     @Override
     public boolean equals(Object object){
         if (this == object) return true;
         if (object == null || getClass() != object.getClass()) return false;
         Country country = (Country) object;
-        return Objects.equals(id, country.id);
+        return Objects.equals (this.id, country.id);
     }
 
     @Override
