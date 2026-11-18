@@ -8,7 +8,7 @@ import com.airlinespoo.locations.service.LocationService;
  * (Bogotá tiene dos). El Módulo 4 los usa para sus vuelos de prueba.
  *
  * <p>Los datos entran por el servicio, así que pasan por las mismas reglas que los del
- * usuario y el generador de ids avanza solo: no hace falta sincronizarlo.</p>
+ * usuario. Solo se cargan si la base de datos todavía no tiene ciudades.</p>
  */
 public final class LocationSampleData {
 
@@ -22,6 +22,11 @@ public final class LocationSampleData {
      * @param service servicio de ubicaciones donde se cargan los datos
      */
     public static void load(LocationService service) {
+        // Los datos quedan guardados en la base de datos de una ejecución a otra:
+        // si ya hay ciudades, no se vuelven a cargar (evita el error de duplicado).
+        if (!service.listCities().isEmpty()) {
+            return;
+        }
         City bogota = service.createCity("Bogotá");
         City medellin = service.createCity("Medellín");
         City rionegro = service.createCity("Rionegro");
