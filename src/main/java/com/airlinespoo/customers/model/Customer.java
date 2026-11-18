@@ -103,7 +103,7 @@ public class Customer implements Identifiable<String> {
         this.country = Validator.requireNotNull(country, "País");
     }
 
-    public void setTelephoneNumber (String telephoneNumber){
+    public static void validFormatPhone (String telephoneNumber){
         String validPhone = Validator.requireText(telephoneNumber, " Teléfono", 15);
 
         //Validación de longitud mínima.
@@ -115,7 +115,12 @@ public class Customer implements Identifiable<String> {
         if (!validPhone.matches("^\\+?[0-9]+$")){
             throw new ValidationException("El teléfono solo debe contener digitos, opcionalmente un '+' al inicio");
         }
-        this.telephoneNumber = validPhone;
+    }
+
+    public void setTelephoneNumber (String telephoneNumber){
+        validFormatPhone(telephoneNumber);
+
+        this.telephoneNumber = telephoneNumber;
     }
 
     public void setEmail(String email){
@@ -142,11 +147,5 @@ public class Customer implements Identifiable<String> {
             this.address = null;
         }
     }
-
-
-
-
-
-
 
 }
