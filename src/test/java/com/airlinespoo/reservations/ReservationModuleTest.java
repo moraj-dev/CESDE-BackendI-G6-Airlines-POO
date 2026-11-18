@@ -9,6 +9,11 @@ import com.airlinespoo.customers.repository.CountryRepository;
 import com.airlinespoo.customers.repository.CustomerRepository;
 import com.airlinespoo.customers.repository.DocumentTypeRepository;
 import com.airlinespoo.customers.service.CustomerService;
+import com.airlinespoo.flights.model.Flight;
+import com.airlinespoo.flights.repository.FlightRepository;
+import com.airlinespoo.flights.service.FlightService;
+import com.airlinespoo.locations.model.Airport;
+import com.airlinespoo.locations.model.City;
 import com.airlinespoo.reservations.model.ManifestEntry;
 import com.airlinespoo.reservations.model.Reservation;
 import com.airlinespoo.reservations.model.ReservationDetail;
@@ -173,11 +178,24 @@ class ReservationModuleTest {
         List<ManifestEntry> manifest = service.getFlightManifest(101);
         assertEquals(5, manifest.size());
 
-        assertEquals("1-1", manifest.get(0).seat().toString());
-        assertEquals("1-2", manifest.get(1).seat().toString());
-        assertEquals("2-1", manifest.get(2).seat().toString());
-        assertEquals("10-1", manifest.get(3).seat().toString());
-        assertEquals("12-3", manifest.get(4).seat().toString());
+        assertEquals("1-1", ManifestEntry.formatSeat(manifest.get(0).seat()));
+        assertEquals("1-2", ManifestEntry.formatSeat(manifest.get(1).seat()));
+        assertEquals("2-1", ManifestEntry.formatSeat(manifest.get(2).seat()));
+        assertEquals("10-1", ManifestEntry.formatSeat(manifest.get(3).seat()));
+        assertEquals("12-3", ManifestEntry.formatSeat(manifest.get(4).seat()));
+    }
+
+    @Test
+    @DisplayName("Cambio de silla con ReservationDetail inmutable")
+    void testChangeSeatWithImmutableDetail() {
+        Seat original = new Seat("1", 1);
+        Seat updated = new Seat("5", 3);
+        Reservation reservation = service.createReservation("101010", 101, "Ana Pérez", "101010", original);
+
+        service.changeSeat(reservation.getId(), "101010", updated);
+
+        assertFalse(service.isSeatOccupied(101, original));
+        assertTrue(service.isSeatOccupied(101, updated));
     }
 
     @Test
@@ -190,5 +208,32 @@ class ReservationModuleTest {
                 details.add(new ReservationDetail(99, "Infiltrado", "DOC99", new Seat("1", 2)))
         );
         assertEquals(1, reservation.passengerCount());
+    }
+
+    @Test
+    @DisplayName("Integración Módulo 4: Validar vuelo existente y comparar sillas por Flight o id")
+    void testIntegrationWithModule4Flights() {
+        FlightService flightService = new FlightService(new FlightRepository());
+        Airport origin = new Airport(java.util.UUID.randomUUID(), "José María Córdova", new City(1, "Medellín"));
+        Airport destination = new Airport(java.util.UUID.randomUUID(), "El Dorado", new City(2, "Bogotá"));
+        Flight flight101 = new Flight(101, "LA-402", origin, destination, "08:00", "09:00", 250000.0, 120);
+        flightService.createFlight(flight101);
+
+        ReservationService integratedService = new ReservationService(
+                repository, customerService, flightService, new IdGenerator(1, 1), new IdGenerator(1, 1));
+
+        Seat seat3A = new Seat("3", 1);
+        Reservation created = integratedService.createReservation("101010", 101, "Ana Pérez", "101010", seat3A);
+
+        assertInstanceOf(Flight.class, created.getFlight());
+        assertEquals(101, ((Flight) created.getFlight()).getId());
+
+        Flight anotherFlightCopy = new Flight(101, "LA-402", origin, destination, "08:00", "09:00", 250000.0, 120);
+        assertTrue(integratedService.isSeatOccupied(101, seat3A));
+        assertTrue(integratedService.isSeatOccupied(anotherFlightCopy, seat3A));
+
+        assertThrows(NotFoundException.class, () ->
+                integratedService.createReservation("101010", 999, "Ana Pérez", "101010", new Seat("4", 1))
+        );
     }
 }
