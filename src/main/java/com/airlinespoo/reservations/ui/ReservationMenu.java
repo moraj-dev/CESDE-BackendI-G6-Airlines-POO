@@ -5,6 +5,7 @@ import com.airlinespoo.core.ui.ConsoleInput;
 import com.airlinespoo.core.ui.Menu;
 import com.airlinespoo.customers.model.Customer;
 import com.airlinespoo.customers.service.CustomerService;
+import com.airlinespoo.flights.model.Flight;
 import com.airlinespoo.reservations.model.ManifestEntry;
 import com.airlinespoo.reservations.model.Reservation;
 import com.airlinespoo.reservations.model.ReservationDetail;
@@ -271,11 +272,21 @@ public class ReservationMenu implements Menu {
     private void printReservationSummary(Reservation res) {
         System.out.println("-------------------------------------------------");
         System.out.printf("Reserva #%d | Cliente: %s (%s) | Vuelo: %s%n",
-                res.getId(), res.getCustomer().getFullName(), res.getCustomer().getId(), res.getFlight());
+                res.getId(), res.getCustomer().getFullName(), res.getCustomer().getId(), formatFlight(res.getFlight()));
         System.out.println("Pasajeros asignados:");
         for (ReservationDetail detail : res.getDetails()) {
             System.out.printf("  * Silla %-4s -> %s (Doc: %s)%n",
                     ManifestEntry.formatSeat(detail.getSeat()), detail.getPassengerFullName(), detail.getPassengerDocument());
         }
+    }
+
+    private static String formatFlight(Object flightObj) {
+        if (flightObj instanceof Flight flight) {
+            String number = flight.getFlightNumber();
+            return (number != null && !number.isBlank())
+                    ? "#%d (%s)".formatted(flight.getId(), number)
+                    : "#" + flight.getId();
+        }
+        return String.valueOf(flightObj);
     }
 }

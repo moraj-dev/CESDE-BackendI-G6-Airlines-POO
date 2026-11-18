@@ -4,6 +4,7 @@ import com.airlinespoo.core.model.Identifiable;
 import com.airlinespoo.core.repository.InMemoryRepository;
 import com.airlinespoo.core.util.Validator;
 import com.airlinespoo.customers.model.Customer;
+import com.airlinespoo.flights.model.Flight;
 import com.airlinespoo.reservations.model.Reservation;
 
 import java.util.ArrayList;
@@ -107,17 +108,27 @@ public class ReservationRepository extends InMemoryRepository<Reservation, Integ
         if (Objects.equals(current, target)) {
             return true;
         }
-        if (target instanceof Integer targetId) {
-            if (current instanceof Identifiable<?> ident && Objects.equals(ident.getId(), targetId)) {
-                return true;
-            }
-            if (current instanceof Number number && number.intValue() == targetId) {
-                return true;
-            }
+        Integer currentId = extractFlightId(current);
+        Integer targetId = extractFlightId(target);
+        if (currentId != null && targetId != null) {
+            return currentId.equals(targetId);
         }
         if (current instanceof Identifiable<?> currentIdent && target instanceof Identifiable<?> targetIdent) {
             return Objects.equals(currentIdent.getId(), targetIdent.getId());
         }
         return false;
+    }
+
+    private static Integer extractFlightId(Object flightObj) {
+        if (flightObj instanceof Flight flight) {
+            return flight.getId();
+        }
+        if (flightObj instanceof Number number) {
+            return number.intValue();
+        }
+        if (flightObj instanceof Identifiable<?> identifiable && identifiable.getId() instanceof Number number) {
+            return number.intValue();
+        }
+        return null;
     }
 }

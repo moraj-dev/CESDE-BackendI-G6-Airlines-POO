@@ -7,6 +7,8 @@ import com.airlinespoo.core.util.IdGenerator;
 import com.airlinespoo.core.util.Validator;
 import com.airlinespoo.customers.model.Customer;
 import com.airlinespoo.customers.service.CustomerService;
+import com.airlinespoo.flights.model.Flight;
+import com.airlinespoo.flights.service.FlightService;
 import com.airlinespoo.reservations.model.ManifestEntry;
 import com.airlinespoo.reservations.model.Reservation;
 import com.airlinespoo.reservations.model.ReservationDetail;
@@ -44,6 +46,7 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final CustomerService customerService;
+    private final FlightService flightService;
     private final IdGenerator reservationIdGenerator;
     private final IdGenerator detailIdGenerator;
 
@@ -59,8 +62,26 @@ public class ReservationService {
                               CustomerService customerService,
                               IdGenerator reservationIdGenerator,
                               IdGenerator detailIdGenerator) {
+        this(reservationRepository, customerService, null, reservationIdGenerator, detailIdGenerator);
+    }
+
+    /**
+     * Construye el servicio integrado con Módulo 1 ({@link CustomerService}) y Módulo 4 ({@link FlightService}).
+     *
+     * @param reservationRepository  repositorio de reservas
+     * @param customerService        servicio del Módulo 1 para validar clientes existentes
+     * @param flightService          servicio del Módulo 4 para validar vuelos existentes (opcional)
+     * @param reservationIdGenerator generador de ids para reservas
+     * @param detailIdGenerator      generador de ids para detalles
+     */
+    public ReservationService(ReservationRepository reservationRepository,
+                              CustomerService customerService,
+                              FlightService flightService,
+                              IdGenerator reservationIdGenerator,
+                              IdGenerator detailIdGenerator) {
         this.reservationRepository = Validator.requireNotNull(reservationRepository, "repositorio de reservas");
         this.customerService = Validator.requireNotNull(customerService, "servicio de clientes");
+        this.flightService = flightService;
         this.reservationIdGenerator = Validator.requireNotNull(reservationIdGenerator, "generador de ids de reserva");
         this.detailIdGenerator = Validator.requireNotNull(detailIdGenerator, "generador de ids de detalle");
     }
@@ -91,7 +112,7 @@ public class ReservationService {
         String cleanCustomerId = Validator.requireText(customerId, "documento del cliente");
         Customer customer = customerService.getCustomer(cleanCustomerId);
 
-        Validator.requireNotNull(flight, "vuelo");
+        Object resolvedFlight = resolveFlight(flight);
         Validator.requireNotNull(passengerRequests, "lista de pasajeros");
 
         if (passengerRequests.isEmpty()) {
@@ -104,7 +125,7 @@ public class ReservationService {
 
         // Regla central: validar que ninguna silla solicitada esté ocupada en el vuelo
         for (PassengerRequest req : passengerRequests) {
-            if (isSeatOccupied(flight, req.seat())) {
+            if (isSeatOccupied(resolvedFlight, req.seat())) {
                 throw new BusinessRuleException(
                         "La silla '%s' ya está ocupada en este vuelo por otra reserva."
                                 .formatted(ManifestEntry.formatSeat(req.seat())));
@@ -118,7 +139,7 @@ public class ReservationService {
             details.add(new ReservationDetail(detailId, req.fullName(), req.document(), req.seat()));
         }
 
-        Reservation reservation = new Reservation(reservationId, customer, flight, details);
+        Reservation reservation = new Reservation(reservationId, customer, resolvedFlight, details);
         return reservationRepository.create(reservation);
     }
 
@@ -236,17 +257,17 @@ public class ReservationService {
 
     public void changeReservationFlight(int reservationId, Object newFlight) {
         Reservation reservation = getReservation(reservationId);
-        Validator.requireNotNull(newFlight, "nuevo vuelo");
+        Object resolvedFlight = resolveFlight(newFlight);
 
         for (ReservationDetail detail : reservation.getDetails()) {
-            if (isSeatOccupied(newFlight, detail.getSeat())) {
+            if (isSeatOccupied(resolvedFlight, detail.getSeat())) {
                 throw new BusinessRuleException(
                         "La silla '%s' no está disponible en el nuevo vuelo solicitado."
                                 .formatted(ManifestEntry.formatSeat(detail.getSeat())));
             }
         }
 
-        reservation.setFlight(newFlight);
+        reservation.setFlight(resolvedFlight);
         reservationRepository.update(reservation);
     }
 
@@ -313,5 +334,24 @@ public class ReservationService {
 
         Collections.sort(manifest);
         return manifest;
+    }
+
+    private Object resolveFlight(Object flightOrId) {
+        Validator.requireNotNull(flightOrId, "vuelo");
+        if (flightService == null) {
+            return flightOrId;
+        }
+        Integer flightId = null;
+        if (flightOrId instanceof Flight flight) {
+            flightId = flight.getId();
+        } else if (flightOrId instanceof Number number) {
+            flightId = number.intValue();
+        }
+        if (flightId == null) {
+            return flightOrId;
+        }
+        int id = flightId;
+        return flightService.getFlightById(id)
+                .orElseThrow(() -> new NotFoundException("vuelo", id));
     }
 }
