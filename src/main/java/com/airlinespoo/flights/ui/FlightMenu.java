@@ -67,9 +67,9 @@ public class FlightMenu {
 
     private void createFlight() {
         System.out.println("\n--- REGISTRAR NUEVO VUELO ---");
-        System.out.print("ID del vuelo (número): ");
-        int id = scanner.nextInt();
-        scanner.nextLine();
+
+        // El ID no se pide por consola ya que es autoincrementable (IDENTITY) en la base de datos.
+        int id = 0;
 
         System.out.print("Número de vuelo (ej. LA-402): ");
         String flightNumber = scanner.nextLine();
@@ -87,10 +87,8 @@ public class FlightMenu {
         int seats = scanner.nextInt();
         scanner.nextLine();
 
-
         City cityMedellin = new City(1, "Medellín");
         City cityBogota = new City(2, "Bogotá");
-
 
         Airport dummyOrigin = new Airport(UUID.randomUUID(), "Aeropuerto Internacional José María Córdova", cityMedellin);
         Airport dummyDestination = new Airport(UUID.randomUUID(), "Aeropuerto El Dorado", cityBogota);
