@@ -13,7 +13,7 @@ import com.airlinespoo.reservations.model.ManifestEntry;
 import com.airlinespoo.reservations.model.Reservation;
 import com.airlinespoo.reservations.model.ReservationDetail;
 import com.airlinespoo.reservations.model.Seat;
-import com.airlinespoo.reservations.repository.ReservationRepository;
+import com.airlinespoo.reservations.repository.IReservationRepository;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,7 +44,7 @@ public class ReservationService {
         }
     }
 
-    private final ReservationRepository reservationRepository;
+    private final IReservationRepository reservationRepository;
     private final CustomerService customerService;
     private final FlightService flightService;
     private final IdGenerator reservationIdGenerator;
@@ -58,7 +58,7 @@ public class ReservationService {
      * @param reservationIdGenerator generador de ids para reservas
      * @param detailIdGenerator      generador de ids para detalles
      */
-    public ReservationService(ReservationRepository reservationRepository,
+    public ReservationService(IReservationRepository reservationRepository,
                               CustomerService customerService,
                               IdGenerator reservationIdGenerator,
                               IdGenerator detailIdGenerator) {
@@ -74,7 +74,7 @@ public class ReservationService {
      * @param reservationIdGenerator generador de ids para reservas
      * @param detailIdGenerator      generador de ids para detalles
      */
-    public ReservationService(ReservationRepository reservationRepository,
+    public ReservationService(IReservationRepository reservationRepository,
                               CustomerService customerService,
                               FlightService flightService,
                               IdGenerator reservationIdGenerator,

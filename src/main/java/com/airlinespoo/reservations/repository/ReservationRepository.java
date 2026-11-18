@@ -17,7 +17,7 @@ import java.util.Objects;
  *
  * <p>Extiende de {@link InMemoryRepository} para {@link Reservation} con clave primaria entera.</p>
  */
-public class ReservationRepository extends InMemoryRepository<Reservation, Integer> {
+public class ReservationRepository extends InMemoryRepository<Reservation, Integer> implements IReservationRepository {
 
     @Override
     protected String entityName() {
@@ -119,7 +119,7 @@ public class ReservationRepository extends InMemoryRepository<Reservation, Integ
         return false;
     }
 
-    private static Integer extractFlightId(Object flightObj) {
+    public static Integer extractFlightId(Object flightObj) {
         if (flightObj instanceof Flight flight) {
             return flight.getId();
         }
