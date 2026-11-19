@@ -5,6 +5,9 @@ import com.airlinespoo.core.exception.NotFoundException;
 import com.airlinespoo.core.exception.ValidationException;
 import com.airlinespoo.core.util.IdGenerator;
 import com.airlinespoo.customers.CustomerSampleData;
+import com.airlinespoo.customers.model.Country;
+import com.airlinespoo.customers.model.Customer;
+import com.airlinespoo.customers.model.DocumentType;
 import com.airlinespoo.customers.repository.CountryRepository;
 import com.airlinespoo.customers.repository.CustomerRepository;
 import com.airlinespoo.customers.repository.DocumentTypeRepository;
@@ -26,7 +29,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -41,11 +47,7 @@ class ReservationModuleTest {
 
     @BeforeEach
     void setUp() {
-        customerService = new CustomerService(
-                new CountryRepository(),
-                new DocumentTypeRepository(),
-                new CustomerRepository()
-        );
+        customerService = createInMemoryCustomerService();
         CustomerSampleData.load(customerService);
 
         repository = new ReservationRepository();
@@ -235,5 +237,84 @@ class ReservationModuleTest {
         assertThrows(NotFoundException.class, () ->
                 integratedService.createReservation("101010", 999, "Ana Pérez", "101010", new Seat("4", 1))
         );
+    }
+
+    private static CustomerService createInMemoryCustomerService() {
+        CountryRepository countryRepo = new CountryRepository() {
+            private final Map<Short, Country> store = new HashMap<>();
+
+            @Override
+            public Country create(Country entity) {
+                store.put(entity.getId(), entity);
+                return entity;
+            }
+
+            @Override
+            public Optional<Country> findById(Short id) {
+                return Optional.ofNullable(store.get(id));
+            }
+
+            @Override
+            public List<Country> findAll() {
+                return new ArrayList<>(store.values());
+            }
+
+            @Override
+            public boolean existsById(Short id) {
+                return store.containsKey(id);
+            }
+        };
+
+        DocumentTypeRepository docRepo = new DocumentTypeRepository() {
+            private final Map<String, DocumentType> store = new HashMap<>();
+
+            @Override
+            public DocumentType create(DocumentType entity) {
+                store.put(entity.getId(), entity);
+                return entity;
+            }
+
+            @Override
+            public Optional<DocumentType> findById(String id) {
+                return Optional.ofNullable(store.get(id));
+            }
+
+            @Override
+            public List<DocumentType> findAll() {
+                return new ArrayList<>(store.values());
+            }
+
+            @Override
+            public boolean existsById(String id) {
+                return store.containsKey(id);
+            }
+        };
+
+        CustomerRepository customerRepo = new CustomerRepository() {
+            private final Map<String, Customer> store = new HashMap<>();
+
+            @Override
+            public Customer create(Customer entity) {
+                store.put(entity.getId(), entity);
+                return entity;
+            }
+
+            @Override
+            public Optional<Customer> findById(String id) {
+                return Optional.ofNullable(store.get(id));
+            }
+
+            @Override
+            public List<Customer> findAll() {
+                return new ArrayList<>(store.values());
+            }
+
+            @Override
+            public boolean existsById(String id) {
+                return store.containsKey(id);
+            }
+        };
+
+        return new CustomerService(countryRepo, docRepo, customerRepo);
     }
 }
