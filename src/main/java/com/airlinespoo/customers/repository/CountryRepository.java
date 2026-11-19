@@ -13,8 +13,8 @@ public class CountryRepository extends InMemoryRepository<Country, Short> {
     //Metodo para la conexión a la base de datos
     private Connection getConnection() throws SQLException {
         String url = "jdbc:sqlserver://localhost:1433;databaseName=dboairlines_poo;encrypt=false";
-        String username = "sa";
-        String password = "12345";
+        String username = "aerolinea";
+        String password = "java&basededatosg6";
         return DriverManager.getConnection(url, username, password);
     }
 
