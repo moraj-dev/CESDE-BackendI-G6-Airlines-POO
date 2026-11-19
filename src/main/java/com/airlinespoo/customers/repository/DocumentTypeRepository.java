@@ -11,7 +11,7 @@ public class DocumentTypeRepository extends InMemoryRepository<DocumentType, Str
 
     // Metodo para la conexión a la base de datos
     private Connection getConnection() throws SQLException {
-        String url = "jdbc:sqlserver://localhost:1433;databaseName=dboairlines_poo;encrypt=false";
+        String url = "jdbc:sqlserver://localhost:1433;databaseName=AerolinesPoo;encrypt=false";
         String username = "aerolinea";
         String password = "java&basededatosg6";
         return DriverManager.getConnection(url, username, password);

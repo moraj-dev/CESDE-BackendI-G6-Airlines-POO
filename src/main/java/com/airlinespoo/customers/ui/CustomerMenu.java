@@ -286,7 +286,7 @@ public class CustomerMenu implements Menu {
         readCountries();
         short countryId = (short) consoleInput.readInt("Ingrese el Id numérico del país a consultar", 1, Short.MAX_VALUE);
 
-        // Asumiendo que codificaste listCustomersByCountry en tu servicio
+
         List<Customer> byCountry = customerService.listCustomerByCountry(countryId);
 
         if (byCountry.isEmpty()){
@@ -304,7 +304,6 @@ public class CustomerMenu implements Menu {
         listByDocumentType();
         String docType = consoleInput.readRequiredText("Ingrese el código del tipo de documento (ej: CC)");
 
-        // Asumiendo que codificaste listCustomersByDocumentType en tu servicio
         List<Customer> porTipo = customerService.listCustomerByDocumentType(docType.toUpperCase());
 
         if (porTipo.isEmpty()){
