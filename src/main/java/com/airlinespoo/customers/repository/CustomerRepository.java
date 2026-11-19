@@ -51,7 +51,7 @@ public class CustomerRepository extends InMemoryRepository<Customer,String> {
 
     @Override
     public Optional<Customer> findById(String id) {
-        String sql = "SELECT c.customerId, c.FirtName, c.Lastname, c.TelephoneNumner, c.Email, c.Address, " +
+        String sql = "SELECT c.customerId, c.FirtName, c.Lastname, c.TelephoneNumber, c.Email, c.Address, " +
             "d.TypeId, d.Description AS Doc, " +
             "co.CountryId, co.Name AS CountryName " +
             "FROM dbo.tblCustomers c " +
