@@ -11,7 +11,6 @@ public class FlightService {
     private final FlightRepository flightRepository = new FlightRepository();
 
     public void createFlight(Flight flight) {
-        // Aquí puedes agregar validaciones de negocio si lo deseas en el futuro
         flightRepository.save(flight);
     }
 

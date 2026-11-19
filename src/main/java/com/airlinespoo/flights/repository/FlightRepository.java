@@ -1,134 +1,246 @@
 package com.airlinespoo.flights.repository;
 
-import com.airlinespoo.flights.model.Flight;
 import com.airlinespoo.core.DatabaseConnection;
+import com.airlinespoo.flights.model.Flight;
+import com.airlinespoo.locations.model.Airport;
 
-import java.sql.*;
+import java.lang.reflect.Method;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 
 public class FlightRepository {
 
-    public void save(Flight flight) {
-        String sql = "INSERT INTO tblFlights (flightNumber, departureTime, arrivalTime, price, availableSeats) VALUES (?, ?, ?, ?, ?)";
-        Connection conn = null;
-        PreparedStatement pstmt = null;
+    private static final String INSERT_FLIGHT_SQL = """
+            INSERT INTO dbo.tblFlights (
+                FlightName,
+                Departure,
+                Arrival,
+                DateDeparture,
+                HourDeparture,
+                DateArrival,
+                HourArrival,
+                AirlineId
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """;
 
-        try {
-            conn = DatabaseConnection.getConnection();
-            pstmt = conn.prepareStatement(sql);
-            pstmt.setString(1, flight.getFlightNumber());
-            pstmt.setString(2, flight.getDepartureTime());
-            pstmt.setString(3, flight.getArrivalTime());
-            pstmt.setDouble(4, flight.getPrice());
-            pstmt.setInt(5, flight.getAvailableSeats());
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (pstmt != null) pstmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException ex) {
-                ex.printStackTrace();
+    private static final String SELECT_ALL_FLIGHTS_SQL = """
+            SELECT
+                FlightId,
+                FlightName,
+                Departure,
+                Arrival,
+                DateDeparture,
+                HourDeparture,
+                DateArrival,
+                HourArrival,
+                AirlineId
+            FROM dbo.tblFlights
+            ORDER BY FlightId DESC
+            """;
+
+    private static final String SELECT_FLIGHT_BY_ID_SQL = """
+            SELECT
+                FlightId,
+                FlightName,
+                Departure,
+                Arrival,
+                DateDeparture,
+                HourDeparture,
+                DateArrival,
+                HourArrival,
+                AirlineId
+            FROM dbo.tblFlights
+            WHERE FlightId = ?
+            """;
+
+    private static final String DELETE_FLIGHT_BY_ID_SQL = """
+            DELETE FROM dbo.tblFlights
+            WHERE FlightId = ?
+            """;
+
+    public void save(Flight flight) {
+        if (flight == null) {
+            throw new IllegalArgumentException("El vuelo no puede ser nulo.");
+        }
+
+        LocalDateTime depDateTime = parseDateTime(flight.getDepartureTime(), LocalDate.now(), LocalTime.of(8, 0));
+        LocalDateTime arrDateTime = parseDateTime(flight.getArrivalTime(), depDateTime.toLocalDate(), LocalTime.of(10, 0));
+
+        UUID departureUuid = extractAirportUuid(flight.getOriginAirport());
+        UUID arrivalUuid = extractAirportUuid(flight.getDestinationAirport());
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(INSERT_FLIGHT_SQL)) {
+
+            ps.setString(1, flight.getFlightNumber());
+
+            if (departureUuid != null) {
+                ps.setString(2, departureUuid.toString());
+            } else {
+                ps.setNull(2, Types.VARCHAR);
             }
+
+            if (arrivalUuid != null) {
+                ps.setString(3, arrivalUuid.toString());
+            } else {
+                ps.setNull(3, Types.VARCHAR);
+            }
+
+            ps.setDate(4, Date.valueOf(depDateTime.toLocalDate()));
+            ps.setTime(5, Time.valueOf(depDateTime.toLocalTime()));
+            ps.setDate(6, Date.valueOf(arrDateTime.toLocalDate()));
+            ps.setTime(7, Time.valueOf(arrDateTime.toLocalTime()));
+            ps.setNull(8, Types.INTEGER);
+
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al guardar el vuelo en dbo.tblFlights: " + e.getMessage(), e);
         }
     }
 
     public List<Flight> findAll() {
         List<Flight> flights = new ArrayList<>();
-        String sql = "SELECT * FROM tblFlights";
-        Connection conn = null;
-        Statement stmt = null;
-        ResultSet rs = null;
 
-        try {
-            conn = DatabaseConnection.getConnection();
-            stmt = conn.createStatement();
-            rs = stmt.executeQuery(sql);
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_ALL_FLIGHTS_SQL);
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                Flight flight = new Flight();
-                flight.setId(rs.getInt("id"));
-                flight.setFlightNumber(rs.getString("flightNumber"));
-                flight.setDepartureTime(rs.getString("departureTime"));
-                flight.setArrivalTime(rs.getString("arrivalTime"));
-                flight.setPrice(rs.getDouble("price"));
-                flight.setAvailableSeats(rs.getInt("availableSeats"));
-                flights.add(flight);
+                flights.add(mapRowToFlight(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (stmt != null) stmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
+            throw new RuntimeException("Error al consultar los vuelos en dbo.tblFlights: " + e.getMessage(), e);
         }
+
         return flights;
     }
 
     public Optional<Flight> findById(int id) {
-        String sql = "SELECT * FROM tblFlights WHERE id = ?";
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_FLIGHT_BY_ID_SQL)) {
 
-        try {
-            conn = DatabaseConnection.getConnection();
-            pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, id);
-            rs = pstmt.executeQuery();
+            ps.setInt(1, id);
 
-            if (rs.next()) {
-                Flight flight = new Flight();
-                flight.setId(rs.getInt("id"));
-                flight.setFlightNumber(rs.getString("flightNumber"));
-                flight.setDepartureTime(rs.getString("departureTime"));
-                flight.setArrivalTime(rs.getString("arrivalTime"));
-                flight.setPrice(rs.getDouble("price"));
-                flight.setAvailableSeats(rs.getInt("availableSeats"));
-                return Optional.of(flight);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapRowToFlight(rs));
+                }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (pstmt != null) pstmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
+            throw new RuntimeException("Error al buscar el vuelo con ID " + id + ": " + e.getMessage(), e);
         }
+
         return Optional.empty();
     }
 
     public boolean delete(int id) {
-        String sql = "DELETE FROM tblFlights WHERE id = ?";
-        Connection conn = null;
-        PreparedStatement pstmt = null;
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(DELETE_FLIGHT_BY_ID_SQL)) {
 
-        try {
-            conn = DatabaseConnection.getConnection();
-            pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, id);
-            int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        } finally {
+            throw new RuntimeException("Error al eliminar el vuelo con ID " + id + ": " + e.getMessage(), e);
+        }
+    }
+
+    private Flight mapRowToFlight(ResultSet rs) throws SQLException {
+        Flight flight = new Flight();
+        flight.setId(rs.getInt("FlightId"));
+        flight.setFlightNumber(rs.getString("FlightName"));
+
+        Date dateDeparture = rs.getDate("DateDeparture");
+        Time hourDeparture = rs.getTime("HourDeparture");
+        Date dateArrival = rs.getDate("DateArrival");
+        Time hourArrival = rs.getTime("HourArrival");
+
+        flight.setDepartureTime(formatDateAndTime(dateDeparture, hourDeparture));
+        flight.setArrivalTime(formatDateAndTime(dateArrival, hourArrival));
+
+        return flight;
+    }
+
+    private String formatDateAndTime(Date date, Time time) {
+        String d = date != null ? date.toLocalDate().toString() : "";
+        String t = time != null ? time.toLocalTime().toString() : "";
+        return (d + " " + t).trim();
+    }
+
+    private UUID extractAirportUuid(Airport airport) {
+        if (airport == null) {
+            return null;
+        }
+        for (String methodName : List.of("getAirportId", "getId", "getUuid")) {
             try {
-                if (pstmt != null) pstmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException ex) {
-                ex.printStackTrace();
+                Method m = airport.getClass().getMethod(methodName);
+                Object val = m.invoke(airport);
+                if (val instanceof UUID uuid) {
+                    return uuid;
+                }
+                if (val != null && !val.toString().isBlank()) {
+                    return UUID.fromString(val.toString().trim());
+                }
+            } catch (Exception ignored) {
             }
         }
+        return null;
+    }
+
+    private LocalDateTime parseDateTime(String raw, LocalDate defaultDate, LocalTime defaultTime) {
+        if (raw == null || raw.isBlank()) {
+            return LocalDateTime.of(defaultDate, defaultTime);
+        }
+
+        String value = raw.trim();
+
+        Locale localeEsCo = new Locale("es", "CO");
+        List<DateTimeFormatter> timeFormatters = List.of(
+            DateTimeFormatter.ofPattern("hh:mm a", Locale.US),
+            DateTimeFormatter.ofPattern("h:mm a", Locale.US),
+            DateTimeFormatter.ofPattern("hh:mm a", localeEsCo),
+            DateTimeFormatter.ofPattern("h:mm a", localeEsCo),
+            DateTimeFormatter.ISO_LOCAL_TIME
+        );
+
+        for (DateTimeFormatter fmt : timeFormatters) {
+            try {
+                LocalTime parsedTime = LocalTime.parse(value.toUpperCase(Locale.ROOT), fmt);
+                return LocalDateTime.of(defaultDate, parsedTime);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        for (DateTimeFormatter dtFmt : List.of(
+            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        )) {
+            try {
+                return LocalDateTime.parse(value, dtFmt);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+
+        try {
+            return LocalDateTime.of(LocalDate.parse(value), defaultTime);
+        } catch (DateTimeParseException ignored) {
+        }
+
+        return LocalDateTime.of(defaultDate, defaultTime);
     }
 }
