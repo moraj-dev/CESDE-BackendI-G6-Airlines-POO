@@ -1,8 +1,8 @@
 package com.airlinespoo.flights.repository;
 
-import com.airlinespoo.core.DatabaseConnection;
 import com.airlinespoo.flights.model.Flight;
 import com.airlinespoo.locations.model.Airport;
+import com.airlinespoo.locations.repository.DatabaseConnection;
 
 import java.lang.reflect.Method;
 import java.sql.Connection;
@@ -12,14 +12,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Types;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,32 +34,36 @@ public class FlightRepository {
 
     private static final String SELECT_ALL_FLIGHTS_SQL = """
             SELECT
-                FlightId,
-                FlightName,
-                Departure,
-                Arrival,
-                DateDeparture,
-                HourDeparture,
-                DateArrival,
-                HourArrival,
-                AirlineId
-            FROM dbo.tblFlights
-            ORDER BY FlightId DESC
+                f.FlightId,
+                f.FlightName,
+                f.Departure,
+                f.Arrival,
+                f.DateDeparture,
+                f.HourDeparture,
+                f.DateArrival,
+                f.HourArrival,
+                f.AirlineId,
+                a.name AS AirlineName
+            FROM dbo.tblFlights f
+            LEFT JOIN dbo.tblAirlines a ON f.AirlineId = a.airlineId
+            ORDER BY f.FlightId DESC
             """;
 
     private static final String SELECT_FLIGHT_BY_ID_SQL = """
             SELECT
-                FlightId,
-                FlightName,
-                Departure,
-                Arrival,
-                DateDeparture,
-                HourDeparture,
-                DateArrival,
-                HourArrival,
-                AirlineId
-            FROM dbo.tblFlights
-            WHERE FlightId = ?
+                f.FlightId,
+                f.FlightName,
+                f.Departure,
+                f.Arrival,
+                f.DateDeparture,
+                f.HourDeparture,
+                f.DateArrival,
+                f.HourArrival,
+                f.AirlineId,
+                a.name AS AirlineName
+            FROM dbo.tblFlights f
+            LEFT JOIN dbo.tblAirlines a ON f.AirlineId = a.airlineId
+            WHERE f.FlightId = ?
             """;
 
     private static final String DELETE_FLIGHT_BY_ID_SQL = """
@@ -78,16 +76,13 @@ public class FlightRepository {
             throw new IllegalArgumentException("El vuelo no puede ser nulo.");
         }
 
-        LocalDateTime depDateTime = parseDateTime(flight.getDepartureTime(), LocalDate.now(), LocalTime.of(8, 0));
-        LocalDateTime arrDateTime = parseDateTime(flight.getArrivalTime(), depDateTime.toLocalDate(), LocalTime.of(10, 0));
-
-        UUID departureUuid = extractAirportUuid(flight.getOriginAirport());
-        UUID arrivalUuid = extractAirportUuid(flight.getDestinationAirport());
+        UUID departureUuid = extractAirportUuid(flight.getDeparture());
+        UUID arrivalUuid = extractAirportUuid(flight.getArrival());
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(INSERT_FLIGHT_SQL)) {
 
-            ps.setString(1, flight.getFlightNumber());
+            ps.setString(1, flight.getFlightName());
 
             if (departureUuid != null) {
                 ps.setString(2, departureUuid.toString());
@@ -101,11 +96,16 @@ public class FlightRepository {
                 ps.setNull(3, Types.VARCHAR);
             }
 
-            ps.setDate(4, Date.valueOf(depDateTime.toLocalDate()));
-            ps.setTime(5, Time.valueOf(depDateTime.toLocalTime()));
-            ps.setDate(6, Date.valueOf(arrDateTime.toLocalDate()));
-            ps.setTime(7, Time.valueOf(arrDateTime.toLocalTime()));
-            ps.setNull(8, Types.INTEGER);
+            ps.setDate(4, flight.getDateDeparture() != null ? Date.valueOf(flight.getDateDeparture()) : null);
+            ps.setTime(5, flight.getHourDeparture() != null ? Time.valueOf(flight.getHourDeparture()) : null);
+            ps.setDate(6, flight.getDateArrival() != null ? Date.valueOf(flight.getDateArrival()) : null);
+            ps.setTime(7, flight.getHourArrival() != null ? Time.valueOf(flight.getHourArrival()) : null);
+
+            if (flight.getAirlineId() != null) {
+                ps.setInt(8, flight.getAirlineId());
+            } else {
+                ps.setNull(8, Types.INTEGER);
+            }
 
             ps.executeUpdate();
         } catch (SQLException e) {
@@ -161,24 +161,24 @@ public class FlightRepository {
 
     private Flight mapRowToFlight(ResultSet rs) throws SQLException {
         Flight flight = new Flight();
-        flight.setId(rs.getInt("FlightId"));
-        flight.setFlightNumber(rs.getString("FlightName"));
+        flight.setFlightId(rs.getInt("FlightId"));
+        flight.setFlightName(rs.getString("FlightName"));
 
         Date dateDeparture = rs.getDate("DateDeparture");
         Time hourDeparture = rs.getTime("HourDeparture");
         Date dateArrival = rs.getDate("DateArrival");
         Time hourArrival = rs.getTime("HourArrival");
 
-        flight.setDepartureTime(formatDateAndTime(dateDeparture, hourDeparture));
-        flight.setArrivalTime(formatDateAndTime(dateArrival, hourArrival));
+        flight.setDateDeparture(dateDeparture != null ? dateDeparture.toLocalDate() : null);
+        flight.setHourDeparture(hourDeparture != null ? hourDeparture.toLocalTime() : null);
+        flight.setDateArrival(dateArrival != null ? dateArrival.toLocalDate() : null);
+        flight.setHourArrival(hourArrival != null ? hourArrival.toLocalTime() : null);
+
+        int airlineId = rs.getInt("AirlineId");
+        flight.setAirlineId(rs.wasNull() ? null : airlineId);
+        flight.setAirlineName(rs.getString("AirlineName"));
 
         return flight;
-    }
-
-    private String formatDateAndTime(Date date, Time time) {
-        String d = date != null ? date.toLocalDate().toString() : "";
-        String t = time != null ? time.toLocalTime().toString() : "";
-        return (d + " " + t).trim();
     }
 
     private UUID extractAirportUuid(Airport airport) {
@@ -199,48 +199,5 @@ public class FlightRepository {
             }
         }
         return null;
-    }
-
-    private LocalDateTime parseDateTime(String raw, LocalDate defaultDate, LocalTime defaultTime) {
-        if (raw == null || raw.isBlank()) {
-            return LocalDateTime.of(defaultDate, defaultTime);
-        }
-
-        String value = raw.trim();
-
-        Locale localeEsCo = new Locale("es", "CO");
-        List<DateTimeFormatter> timeFormatters = List.of(
-            DateTimeFormatter.ofPattern("hh:mm a", Locale.US),
-            DateTimeFormatter.ofPattern("h:mm a", Locale.US),
-            DateTimeFormatter.ofPattern("hh:mm a", localeEsCo),
-            DateTimeFormatter.ofPattern("h:mm a", localeEsCo),
-            DateTimeFormatter.ISO_LOCAL_TIME
-        );
-
-        for (DateTimeFormatter fmt : timeFormatters) {
-            try {
-                LocalTime parsedTime = LocalTime.parse(value.toUpperCase(Locale.ROOT), fmt);
-                return LocalDateTime.of(defaultDate, parsedTime);
-            } catch (DateTimeParseException ignored) {
-            }
-        }
-
-        for (DateTimeFormatter dtFmt : List.of(
-            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-        )) {
-            try {
-                return LocalDateTime.parse(value, dtFmt);
-            } catch (DateTimeParseException ignored) {
-            }
-        }
-
-        try {
-            return LocalDateTime.of(LocalDate.parse(value), defaultTime);
-        } catch (DateTimeParseException ignored) {
-        }
-
-        return LocalDateTime.of(defaultDate, defaultTime);
     }
 }

@@ -7,8 +7,8 @@ import com.airlinespoo.core.util.IdGenerator;
 import com.airlinespoo.core.util.Validator;
 import com.airlinespoo.locations.model.Airport;
 import com.airlinespoo.locations.model.City;
-import com.airlinespoo.locations.repository.AirportRepository;
-import com.airlinespoo.locations.repository.CityRepository;
+import com.airlinespoo.locations.repository.IAirportRepository;
+import com.airlinespoo.locations.repository.ICityRepository;
 
 import java.util.Comparator;
 import java.util.List;
@@ -21,7 +21,9 @@ import java.util.UUID;
  * No imprime ni lee de la consola.</p>
  *
  * <p>Recibe sus dependencias por el constructor (inyección de dependencias manual):
- * no crea los repositorios ni el generador, se los entregan.</p>
+ * no crea los repositorios ni el generador, se los entregan. Recibe las
+ * <b>interfaces</b> de los repositorios, así que no sabe si los datos están en memoria
+ * o en la base de datos.</p>
  */
 public class LocationService {
 
@@ -31,8 +33,8 @@ public class LocationService {
     private static final Comparator<Airport> AIRPORT_BY_NAME =
         Comparator.comparing(Airport::getName, String.CASE_INSENSITIVE_ORDER);
 
-    private final CityRepository cityRepository;
-    private final AirportRepository airportRepository;
+    private final ICityRepository cityRepository;
+    private final IAirportRepository airportRepository;
     private final IdGenerator cityIds;
 
     /**
@@ -42,7 +44,7 @@ public class LocationService {
      * @param airportRepository repositorio de aeropuertos
      * @param cityIds           generador de ids de ciudades (arranque 1, paso 1)
      */
-    public LocationService(CityRepository cityRepository, AirportRepository airportRepository,
+    public LocationService(ICityRepository cityRepository, IAirportRepository airportRepository,
                            IdGenerator cityIds) {
         this.cityRepository = cityRepository;
         this.airportRepository = airportRepository;
@@ -68,9 +70,11 @@ public class LocationService {
         cityRepository.findByName(city.getName()).ifPresent(other -> {
             throw new DuplicateException("Ya existe una ciudad llamada '%s'.".formatted(other.getName()));
         });
-        cityRepository.create(city);
+        // En la base de datos el id lo asigna el motor (IDENTITY): por eso se devuelve
+        // la ciudad que entrega el repositorio, que ya trae el id real.
+        City saved = cityRepository.create(city);
         cityIds.next();
-        return city;
+        return saved;
     }
 
     /**

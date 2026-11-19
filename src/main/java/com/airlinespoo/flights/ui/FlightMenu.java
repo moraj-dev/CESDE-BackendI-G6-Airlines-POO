@@ -3,19 +3,21 @@ package com.airlinespoo.flights.ui;
 import com.airlinespoo.flights.model.Flight;
 import com.airlinespoo.flights.service.FlightService;
 import com.airlinespoo.locations.model.Airport;
-import com.airlinespoo.locations.model.City;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 import java.util.UUID;
 
 public class FlightMenu {
-    private final FlightService flightService;
-    private final Scanner scanner;
 
-    public FlightMenu(FlightService flightService) {
-        this.flightService = flightService;
-        this.scanner = new Scanner(System.in);
-    }
+    private final FlightService flightService = new FlightService();
+    private final Scanner scanner = new Scanner(System.in);
 
     public void showMenu() {
         int option;
@@ -28,99 +30,183 @@ public class FlightMenu {
             System.out.println("0. Salir");
             System.out.print("Seleccione una opción: ");
 
-            option = scanner.nextInt();
-            scanner.nextLine();
+            String input = scanner.nextLine().trim();
+            try {
+                option = Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Ingrese un número válido.");
+                option = -1;
+                continue;
+            }
 
             switch (option) {
-                case 1:
-                    listFlights();
-                    break;
-                case 2:
-                    createFlight();
-                    break;
-                case 3:
-                    findFlightById();
-                    break;
-                case 4:
-                    removeFlight();
-                    break;
-                case 0:
-                    System.out.println("Saliendo del módulo de vuelos...");
-                    break;
-                default:
-                    System.out.println("Opción inválida. Intente de nuevo.");
+                case 1 -> listFlights();
+                case 2 -> registerFlight();
+                case 3 -> findFlightById();
+                case 4 -> deleteFlight();
+                case 0 -> System.out.println("Saliendo del menú de vuelos...");
+                default -> System.out.println("Opción no válida.");
             }
         } while (option != 0);
     }
 
     private void listFlights() {
-        System.out.println("\n--- LISTA DE VUELOS ---");
-        var flights = flightService.getAllFlights();
-        if (flights.isEmpty()) {
-            System.out.println("No hay vuelos registrados.");
-        } else {
-            for (Flight f : flights) {
-                System.out.println(f);
+        try {
+            List<Flight> flights = flightService.getAllFlights();
+            if (flights.isEmpty()) {
+                System.out.println("No hay vuelos registrados.");
+                return;
             }
+            for (Flight f : flights) {
+                System.out.printf(
+                    "ID: %d | Vuelo: %s | Aerolínea ID: %s (%s) | Salida: %s %s | Llegada: %s %s%n",
+                    f.getFlightId(),
+                    f.getFlightName(),
+                    f.getAirlineId(),
+                    f.getAirlineName() != null ? f.getAirlineName() : "N/A",
+                    f.getDateDeparture(),
+                    f.getHourDeparture(),
+                    f.getDateArrival(),
+                    f.getHourArrival()
+                );
+            }
+        } catch (RuntimeException e) {
+            System.out.println("Error al listar vuelos: " + e.getMessage());
         }
     }
 
-    private void createFlight() {
-        System.out.println("\n--- REGISTRAR NUEVO VUELO ---");
-
-        // El ID no se pide por consola ya que es autoincrementable (IDENTITY) en la base de datos.
-        int id = 0;
-
-        System.out.print("Número de vuelo (ej. LA-402): ");
-        String flightNumber = scanner.nextLine();
-
-        System.out.print("Hora de salida: ");
-        String departureTime = scanner.nextLine();
-
-        System.out.print("Hora de llegada: ");
-        String arrivalTime = scanner.nextLine();
-
-        System.out.print("Precio: ");
-        double price = scanner.nextDouble();
-
-        System.out.print("Asientos disponibles: ");
-        int seats = scanner.nextInt();
-        scanner.nextLine();
-
-        City cityMedellin = new City(1, "Medellín");
-        City cityBogota = new City(2, "Bogotá");
-
-        Airport dummyOrigin = new Airport(UUID.randomUUID(), "Aeropuerto Internacional José María Córdova", cityMedellin);
-        Airport dummyDestination = new Airport(UUID.randomUUID(), "Aeropuerto El Dorado", cityBogota);
-
+    private void registerFlight() {
         try {
-            Flight newFlight = new Flight(id, flightNumber, dummyOrigin, dummyDestination, departureTime, arrivalTime, price, seats);
-            flightService.createFlight(newFlight);
+            System.out.print("Código/Nombre del vuelo (máx. 8 caracteres, ej. AV101): ");
+            String flightName = scanner.nextLine().trim();
+
+            System.out.print("UUID aeropuerto de salida (o Enter para omitir): ");
+            String departureRaw = scanner.nextLine().trim();
+            Airport departure = buildAirportIfValid(departureRaw);
+
+            System.out.print("UUID aeropuerto de llegada (o Enter para omitir): ");
+            String arrivalRaw = scanner.nextLine().trim();
+            Airport arrival = buildAirportIfValid(arrivalRaw);
+
+            LocalDate dateDeparture = readLocalDate("Fecha de salida (YYYY-MM-DD, ej. 2026-11-25): ");
+            LocalTime hourDeparture = readLocalTime("Hora de salida (HH:mm o HH:mm:ss, ej. 08:30): ");
+            LocalDate dateArrival = readLocalDate("Fecha de llegada (YYYY-MM-DD, ej. 2026-11-25): ");
+            LocalTime hourArrival = readLocalTime("Hora de llegada (HH:mm o HH:mm:ss, ej. 10:15): ");
+
+            System.out.print("ID de aerolínea (ej. 100, o Enter para omitir): ");
+            String airlineRaw = scanner.nextLine().trim();
+            Integer airlineId = airlineRaw.isEmpty() ? null : Integer.parseInt(airlineRaw);
+
+            Flight flight = new Flight();
+            flight.setFlightName(flightName);
+            flight.setDeparture(departure);
+            flight.setArrival(arrival);
+            flight.setDateDeparture(dateDeparture);
+            flight.setHourDeparture(hourDeparture);
+            flight.setDateArrival(dateArrival);
+            flight.setHourArrival(hourArrival);
+            flight.setAirlineId(airlineId);
+
+            flightService.createFlight(flight);
             System.out.println("¡Vuelo registrado exitosamente!");
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            System.out.println("Datos inválidos: " + e.getMessage());
+        } catch (RuntimeException e) {
             System.out.println("Error al registrar el vuelo: " + e.getMessage());
         }
     }
 
     private void findFlightById() {
-        System.out.print("\nIngrese el ID del vuelo a buscar: ");
-        int id = scanner.nextInt();
-        var flight = flightService.getFlightById(id);
-        if (flight.isPresent()) {
-            System.out.println("Vuelo encontrado: " + flight.get());
-        } else {
-            System.out.println("No se encontró ningún vuelo con ese ID.");
+        try {
+            System.out.print("Ingrese el ID del vuelo: ");
+            int id = Integer.parseInt(scanner.nextLine().trim());
+            Optional<Flight> flightOpt = flightService.getFlightById(id);
+            if (flightOpt.isPresent()) {
+                Flight f = flightOpt.get();
+                System.out.printf(
+                    "ID: %d | Vuelo: %s | Aerolínea ID: %s (%s) | Salida: %s %s | Llegada: %s %s%n",
+                    f.getFlightId(),
+                    f.getFlightName(),
+                    f.getAirlineId(),
+                    f.getAirlineName() != null ? f.getAirlineName() : "N/A",
+                    f.getDateDeparture(),
+                    f.getHourDeparture(),
+                    f.getDateArrival(),
+                    f.getHourArrival()
+                );
+            } else {
+                System.out.println("No se encontró un vuelo con ID " + id);
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("El ID debe ser un número entero.");
+        } catch (RuntimeException e) {
+            System.out.println("Error al buscar vuelo: " + e.getMessage());
         }
     }
 
-    private void removeFlight() {
-        System.out.print("\nIngrese el ID del vuelo a eliminar: ");
-        int id = scanner.nextInt();
+    private void deleteFlight() {
         try {
-            flightService.removeFlight(id);
-            System.out.println("Vuelo eliminado correctamente.");
+            System.out.print("Ingrese el ID del vuelo a eliminar: ");
+            int id = Integer.parseInt(scanner.nextLine().trim());
+            if (flightService.removeFlight(id)) {
+                System.out.println("Vuelo eliminado correctamente.");
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("El ID debe ser un número entero.");
+        } catch (RuntimeException e) {
+            System.out.println("Error al eliminar vuelo: " + e.getMessage());
+        }
+    }
+
+    private LocalDate readLocalDate(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String value = scanner.nextLine().trim();
+            try {
+                return LocalDate.parse(value);
+            } catch (DateTimeParseException e) {
+                System.out.println("Formato de fecha inválido. Usa YYYY-MM-DD (ejemplo: 2026-11-25).");
+            }
+        }
+    }
+
+    private LocalTime readLocalTime(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String value = scanner.nextLine().trim();
+            try {
+                return LocalTime.parse(value);
+            } catch (DateTimeParseException e) {
+                System.out.println("Formato de hora inválido. Usa HH:mm o HH:mm:ss (ejemplo: 08:30).");
+            }
+        }
+    }
+
+    private Airport buildAirportIfValid(String rawUuid) {
+        if (rawUuid == null || rawUuid.isBlank()) {
+            return null;
+        }
+        UUID uuid = UUID.fromString(rawUuid.trim());
+        try {
+            Constructor<Airport> ctor = Airport.class.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            Airport airport = ctor.newInstance();
+            for (String setter : List.of("setAirportId", "setId", "setUuid")) {
+                try {
+                    Method m = Airport.class.getMethod(setter, UUID.class);m.invoke(airport, uuid);
+                    return airport;
+                } catch (NoSuchMethodException ignored) {
+                    try {
+                        Method mStr = Airport.class.getMethod(setter, String.class);
+                        mStr.invoke(airport, uuid.toString());
+                        return airport;
+                    } catch (NoSuchMethodException ignored2) {
+                    }
+                }
+            }
+            return airport;
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
+            return null;
         }
     }
 }

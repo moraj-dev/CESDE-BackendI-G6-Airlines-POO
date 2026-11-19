@@ -2,106 +2,190 @@ package com.airlinespoo.flights.model;
 
 import com.airlinespoo.locations.model.Airport;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+
 public class Flight {
-    private int id;
-    private String flightNumber;
-    private Airport originAirport;
-    private Airport destinationAirport;
-    private String departureTime;
-    private String arrivalTime;
-    private double price;
-    private int availableSeats;
+    private int flightId;
+    private String flightName;
+    private Airport departure;
+    private Airport arrival;
+    private LocalDate dateDeparture;
+    private LocalTime hourDeparture;
+    private LocalDate dateArrival;
+    private LocalTime hourArrival;
+    private Integer airlineId;
+    private String airlineName;
 
     public Flight() {
     }
 
-    public Flight(int id, String flightNumber, Airport originAirport, Airport destinationAirport,
-                  String departureTime, String arrivalTime, double price, int availableSeats) {
-        this.id = id;
-        this.flightNumber = flightNumber;
-        this.originAirport = originAirport;
-        this.destinationAirport = destinationAirport;
-        this.departureTime = departureTime;
-        this.arrivalTime = arrivalTime;
-        this.price = price;
-        this.availableSeats = availableSeats;
+    public Flight(int flightId,
+                  String flightName,
+                  Airport departure,
+                  Airport arrival,
+                  LocalDate dateDeparture,
+                  LocalTime hourDeparture,
+                  LocalDate dateArrival,
+                  LocalTime hourArrival,
+                  Integer airlineId,
+                  String airlineName) {
+        this.flightId = flightId;
+        this.flightName = flightName;
+        this.departure = departure;
+        this.arrival = arrival;
+        this.dateDeparture = dateDeparture;
+        this.hourDeparture = hourDeparture;
+        this.dateArrival = dateArrival;
+        this.hourArrival = hourArrival;
+        this.airlineId = airlineId;
+        this.airlineName = airlineName;
+    }
+
+    public Flight(int flightId,
+                  String flightName,
+                  Airport departure,
+                  Airport arrival,
+                  LocalDate dateDeparture,
+                  LocalTime hourDeparture,
+                  LocalDate dateArrival,
+                  LocalTime hourArrival) {
+        this(flightId, flightName, departure, arrival, dateDeparture, hourDeparture, dateArrival, hourArrival, null, null);
+    }
+
+    public Flight(int flightId,
+                  String flightName,
+                  Airport departure,
+                  Airport arrival,
+                  String dateDeparture,
+                  String hourDeparture,
+                  String dateArrival,
+                  String hourArrival) {
+        this.flightId = flightId;
+        this.flightName = flightName;
+        this.departure = departure;
+        this.arrival = arrival;
+        this.dateDeparture = parseDateOrNull(dateDeparture);
+        this.hourDeparture = parseTimeOrNull(hourDeparture);
+        this.dateArrival = parseDateOrNull(dateArrival);
+        this.hourArrival = parseTimeOrNull(hourArrival);
+    }
+
+    private LocalDate parseDateOrNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return LocalDate.parse(value.trim());
+    }
+
+    private LocalTime parseTimeOrNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return LocalTime.parse(value.trim());
+    }
+
+    public int getFlightId() {
+        return flightId;
+    }
+
+    public void setFlightId(int flightId) {
+        this.flightId = flightId;
     }
 
     public int getId() {
-        return id;
+        return flightId;
     }
 
     public void setId(int id) {
-        this.id = id;
+        this.flightId = id;
     }
 
-    public String getFlightNumber() {
-        return flightNumber;
+    public String getFlightName() {
+        return flightName;
     }
 
-    public void setFlightNumber(String flightNumber) {
-        this.flightNumber = flightNumber;
+    public void setFlightName(String flightName) {
+        this.flightName = flightName;
     }
 
-    public Airport getOriginAirport() {
-        return originAirport;
+    public Airport getDeparture() {
+        return departure;
     }
 
-    public void setOriginAirport(Airport originAirport) {
-        this.originAirport = originAirport;
+    public void setDeparture(Airport departure) {
+        this.departure = departure;
     }
 
-    public Airport getDestinationAirport() {
-        return destinationAirport;
+    public Airport getArrival() {
+        return arrival;
     }
 
-    public void setDestinationAirport(Airport destinationAirport) {
-        this.destinationAirport = destinationAirport;
+    public void setArrival(Airport arrival) {
+        this.arrival = arrival;
     }
 
-    public String getDepartureTime() {
-        return departureTime;
+    public LocalDate getDateDeparture() {
+        return dateDeparture;
     }
 
-    public void setDepartureTime(String departureTime) {
-        this.departureTime = departureTime;
+    public void setDateDeparture(LocalDate dateDeparture) {
+        this.dateDeparture = dateDeparture;
     }
 
-    public String getArrivalTime() {
-        return arrivalTime;
+    public LocalTime getHourDeparture() {
+        return hourDeparture;
     }
 
-    public void setArrivalTime(String arrivalTime) {
-        this.arrivalTime = arrivalTime;
+    public void setHourDeparture(LocalTime hourDeparture) {
+        this.hourDeparture = hourDeparture;
     }
 
-    public double getPrice() {
-        return price;
+    public LocalDate getDateArrival() {
+        return dateArrival;
     }
 
-    public void setPrice(double price) {
-        this.price = price;
+    public void setDateArrival(LocalDate dateArrival) {
+        this.dateArrival = dateArrival;
     }
 
-    public int getAvailableSeats() {
-        return availableSeats;
+    public LocalTime getHourArrival() {
+        return hourArrival;
     }
 
-    public void setAvailableSeats(int availableSeats) {
-        this.availableSeats = availableSeats;
+    public void setHourArrival(LocalTime hourArrival) {
+        this.hourArrival = hourArrival;
+    }
+
+    public Integer getAirlineId() {
+        return airlineId;
+    }
+
+    public void setAirlineId(Integer airlineId) {
+        this.airlineId = airlineId;
+    }
+
+    public String getAirlineName() {
+        return airlineName;
+    }
+
+    public void setAirlineName(String airlineName) {
+        this.airlineName = airlineName;
     }
 
     @Override
     public String toString() {
         return "Flight{" +
-            "id=" + id +
-            ", flightNumber='" + flightNumber + '\'' +
-            ", originAirport=" + originAirport +
-            ", destinationAirport=" + destinationAirport +
-            ", departureTime='" + departureTime + '\'' +
-            ", arrivalTime='" + arrivalTime + '\'' +
-            ", price=" + price +
-            ", availableSeats=" + availableSeats +
+            "flightId=" + flightId +
+            ", flightName='" + flightName + '\'' +
+            ", departure=" + departure +
+            ", arrival=" + arrival +
+            ", dateDeparture=" + dateDeparture +
+            ", hourDeparture=" + hourDeparture +
+            ", dateArrival=" + dateArrival +
+            ", hourArrival=" + hourArrival +
+            ", airlineId=" + airlineId +
+            ", airlineName='" + airlineName + '\'' +
             '}';
     }
 }

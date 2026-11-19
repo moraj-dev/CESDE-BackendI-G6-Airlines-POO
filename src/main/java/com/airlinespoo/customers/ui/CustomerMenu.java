@@ -53,19 +53,19 @@ public class CustomerMenu implements Menu {
 
             try {
                 switch (option){
-                    case 1 -> registrarCliente();
-                    case 2 -> consultarCliente();
-                    case 3 -> actualizarContacto();
-                    case 4 -> listarClientes();
-                    case 5 -> buscarPorApellido();
-                    case 6 -> eliminarCliente();
-                    case 7 -> registrarPais();
-                    case 8 -> mostrarCountries();
-                    case 9 -> mostrarDocumentType();
-                    case 10 -> registrarTipoDocumento();
+                    case 1 -> createCustomer();
+                    case 2 -> readCustomer();
+                    case 3 -> updateCustomer();
+                    case 4 -> listCustomers();
+                    case 5 -> searchByrLastname();
+                    case 6 -> deleteCustomer();
+                    case 7 -> createCountry();
+                    case 8 -> readCountries();
+                    case 9 -> readDocumentType();
+                    case 10 -> createDocumentType();
                     case 11 -> countCustomers();
-                    case 12 -> listarPorPais();
-                    case 13 -> listarPorTipoDocumento();
+                    case 12 -> listByCountry();
+                    case 13 -> listByDocumentType();
                     case 14 -> salir = true;
                 }
             } catch (AirlinesException exception){
@@ -81,22 +81,36 @@ public class CustomerMenu implements Menu {
     }
 
     //Opcion 1. Registro de Clientes
-    private void registrarCliente(){
+    private void createCustomer(){
         System.out.println("\n-- REGISTRAR CLIENTE --");
 
         String firsName = consoleInput.readRequiredText("Ingrese los nombres del cliente");
-        String lastName = consoleInput.readOptionalText("Ingrese los apellidos del cliente");
+        String lastName = consoleInput.readRequiredText("Ingrese los apellidos del cliente");
 
-        mostrarDocumentType();
+        readDocumentType();
         String documentTypeId = consoleInput.readRequiredText("Ingrese el tipo de documento, ej: 'CC', 'TI'.");
         DocumentType documentType = customerService.getDocumentType(documentTypeId.toUpperCase());
         String id = consoleInput.readRequiredText("Ingrese el documento de Identidad del cliente");
 
-        String telephone = consoleInput.readRequiredText("Ingrese el número de telefono del cliente");
+        String telephone = "";
+        while (true) {
+            try {
+                telephone = consoleInput.readRequiredText("Ingrese el número de teléfono del cliente");
+
+                // Le pedimos al Modelo que evalúe el texto ingresado
+                Customer.validFormatPhone(telephone);
+
+                // Si pasa la prueba sin lanzar excepciones, rompemos el ciclo y avanzamos
+                break;
+            } catch (AirlinesException exception) {
+                // Si el Modelo detecta una infracción, el menú la atrapa, muestra el mensaje y re-pregunta
+                System.out.println("❌ " + exception.getMessage() + " Intente de nuevo.");
+            }
+        }
         String email = consoleInput.readOptionalText("Ingrese el correo electrónico del cliente");
         String address = consoleInput.readOptionalText("Ingrese la dirección del cliente");
 
-        mostrarCountries();
+        readCountries();
         short countryId = (short) consoleInput.readInt("Ingrese el Id numérico del pais del cliente", 1, Short.MAX_VALUE);
         Country country = customerService.getCountry(countryId);
 
@@ -109,7 +123,7 @@ public class CustomerMenu implements Menu {
     }
 
     //Opcion 2. Consultar CLientes
-    private void consultarCliente(){
+    private void readCustomer(){
         System.out.println("\n-- CONSULTAR CLIENTE --");
         String id = consoleInput.readRequiredText("Ingrese el documento de identidad del cliente que desea buscar");
 
@@ -125,7 +139,7 @@ public class CustomerMenu implements Menu {
     }
 
     //Opcion 3. Actualizar Cliente
-    private void actualizarContacto(){
+    private void updateCustomer(){
         System.out.println("\n-- ACTUALIZAR CONTACTO --");
         String id = consoleInput.readRequiredText("Ingrese el documento del cliente que requiere actualizar datos de contacto");
 
@@ -152,7 +166,7 @@ public class CustomerMenu implements Menu {
     }
 
     //Opcion 4. Lista de todos los clientes registrados.
-    private void listarClientes(){
+    private void listCustomers(){
         System.out.println("\n-- LISTADO DE CLIENTES --");
         List<Customer> customers = customerService.listCustomer();
 
@@ -166,7 +180,7 @@ public class CustomerMenu implements Menu {
     }
 
     //Opcion 5. Busqueda por coincidencia de texto
-    private void buscarPorApellido(){
+    private void searchByrLastname(){
         System.out.println("\n-- BUSCAR POR APELLIDO --");
         String lastName = consoleInput.readRequiredText("Ingrese las letras de la coincidencia que desea encontrar");
 
@@ -183,7 +197,7 @@ public class CustomerMenu implements Menu {
     }
 
     //Opcion 6. Eliminar Cliente
-    private void eliminarCliente(){
+    private void deleteCustomer(){
         System.out.println("\n-- ELIMINAR CLIENTE --");
         String id = consoleInput.readRequiredText("Ingrese el numero de documento del cliente que desea eliminar");
 
@@ -200,21 +214,38 @@ public class CustomerMenu implements Menu {
     }
 
     //Opcion 7. Registrar un nuevo país en el catálogo
-    private void registrarPais(){
+    private void createCountry(){
         System.out.println("\n-- REGISTRAR NUEVO PAÍS --");
+        short countryId = 0;
+        String countryName = "";
 
         // El ID numérico suele requerirse mayor a 0
-        short id = (short) consoleInput.readInt("Ingrese el código numérico del nuevo país", 1, Short.MAX_VALUE);
-        String name = consoleInput.readRequiredText("Ingrese el nombre del país");
+        while (true){
+            try{
+                countryId = (short) consoleInput.readInt ("Ingrese el ID numérico del país (ej: 57)",1,Short.MAX_VALUE);;
+                break;
+            } catch (Exception exception){
+                System.out.println("❌ Por favor ingrese un número válido");
+            }
+        }
 
-        Country newCountry = new Country(id, name);
+        while (true){
+            try{
+                countryName = consoleInput.readRequiredText("Ingrese el nombre del país");
+                Country.validCountry(countryId, countryName);
+                break;
+            } catch (AirlinesException exception){
+                System.out.println("❌ " + exception.getMessage() + "Intente nuevamente ");
+            }
+        }
 
+        Country newCountry = new Country(countryId, countryName);
         customerService.createCountry(newCountry);
         System.out.println("✅ País registrado con éxito.");
     }
 
     //Opcion 8. Listar Paises
-    private void mostrarCountries(){
+    private void readCountries(){
         System.out.println("\nPaíses disponibles:");
         for (Country c : customerService.listCountries()){
             System.out.println(" - ID: " + c.getId() + " | " + c.getName());
@@ -222,7 +253,7 @@ public class CustomerMenu implements Menu {
     }
 
     //Opcion 9. Metodo para mostrar el tipo de documento
-    private void mostrarDocumentType(){
+    private void readDocumentType(){
         System.out.println("\nTipos de documento disponibles:");
         for (DocumentType dt : customerService.listDocumentTypes()){
             System.out.println(" - " + dt.getId() + " (" + dt.getDescription() + ")");
@@ -230,7 +261,7 @@ public class CustomerMenu implements Menu {
     }
 
     // Opcion 10. Registrar un nuevo tipo de documento
-    private void registrarTipoDocumento(){
+    private void createDocumentType(){
         System.out.println("\n-- REGISTRAR NUEVO TIPO DE DOCUMENTO --");
 
         String id = consoleInput.readRequiredText("Ingrese el código del tipo de documento (exactamente 2 letras, ej: 'CC', 'TI')");
@@ -250,12 +281,12 @@ public class CustomerMenu implements Menu {
     }
 
     // Opcion 12: Listar clientes por un país específico
-    private void listarPorPais(){
+    private void listByCountry(){
         System.out.println("\n-- CLIENTES POR PAÍS --");
-        mostrarCountries();
+        readCountries();
         short countryId = (short) consoleInput.readInt("Ingrese el Id numérico del país a consultar", 1, Short.MAX_VALUE);
 
-        // Asumiendo que codificaste listCustomersByCountry en tu servicio
+
         List<Customer> byCountry = customerService.listCustomerByCountry(countryId);
 
         if (byCountry.isEmpty()){
@@ -268,12 +299,11 @@ public class CustomerMenu implements Menu {
     }
 
     // Opcion 13: Listar clientes por tipo de documento
-    private void listarPorTipoDocumento(){
+    private void listByDocumentType(){
         System.out.println("\n-- CLIENTES POR TIPO DE DOCUMENTO --");
-        mostrarDocumentType();
+        listByDocumentType();
         String docType = consoleInput.readRequiredText("Ingrese el código del tipo de documento (ej: CC)");
 
-        // Asumiendo que codificaste listCustomersByDocumentType en tu servicio
         List<Customer> porTipo = customerService.listCustomerByDocumentType(docType.toUpperCase());
 
         if (porTipo.isEmpty()){
