@@ -59,10 +59,9 @@ public class FlightMenu {
             }
             for (Flight f : flights) {
                 System.out.printf(
-                    "ID: %d | Vuelo: %s | Aerolínea ID: %s (%s) | Salida: %s %s | Llegada: %s %s%n",
-                    f.getFlightId(),
+                    "ID: %d | Vuelo: %s | Aerolínea: %s | Salida: %s %s | Llegada: %s %s%n",
+                    f.getId(),
                     f.getFlightName(),
-                    f.getAirlineId(),
                     f.getAirlineName() != null ? f.getAirlineName() : "N/A",
                     f.getDateDeparture(),
                     f.getHourDeparture(),
@@ -110,8 +109,6 @@ public class FlightMenu {
             flightService.createFlight(flight);
             System.out.println("¡Vuelo registrado exitosamente!");
         } catch (RuntimeException e) {
-            System.out.println("Datos inválidos: " + e.getMessage());
-        } catch (RuntimeException e) {
             System.out.println("Error al registrar el vuelo: " + e.getMessage());
         }
     }
@@ -124,11 +121,10 @@ public class FlightMenu {
             if (flightOpt.isPresent()) {
                 Flight f = flightOpt.get();
                 System.out.printf(
-                    "ID: %d | Vuelo: %s | Aerolínea ID: %s (%s) | Salida: %s %s | Llegada: %s %s%n",
-                    f.getFlightId(),
+                    "ID: %d | Vuelo: %s | Aerolínea: %s | Salida: %s %s | Llegada: %s %s%n",
+                    f.getId(),
                     f.getFlightName(),
-                    f.getAirlineId(),
-                    f.getAirlineName() != null ? f.getAirlineName() : "N/A",
+                    f.getAirlineName()!= null ? f.getAirlineName() : "N/A",
                     f.getDateDeparture(),
                     f.getHourDeparture(),
                     f.getDateArrival(),
