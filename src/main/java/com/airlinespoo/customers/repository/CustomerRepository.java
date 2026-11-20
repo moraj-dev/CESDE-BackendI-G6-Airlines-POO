@@ -1,5 +1,6 @@
 package com.airlinespoo.customers.repository;
 
+import com.airlinespoo.core.exception.BusinessRuleException;
 import com.airlinespoo.core.repository.InMemoryRepository;
 import com.airlinespoo.customers.model.Customer;
 import com.airlinespoo.customers.model.Country;
@@ -160,6 +161,9 @@ public class CustomerRepository extends InMemoryRepository<Customer,String> {
             return (rowsAffected > 0);
 
         } catch (SQLException e) {
+            if (e.getErrorCode() == 547) {
+                throw new BusinessRuleException("No se puede eliminar el cliente porque tiene reservas asociadas.");
+            }
             throw new RuntimeException("❌ Error al eliminar el cliente: " + e.getMessage());
         }
     }

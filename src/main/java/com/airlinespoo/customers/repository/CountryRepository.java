@@ -1,5 +1,6 @@
 package com.airlinespoo.customers.repository;
 
+import com.airlinespoo.core.exception.BusinessRuleException;
 import com.airlinespoo.core.repository.InMemoryRepository;
 import com.airlinespoo.customers.model.Country;
 import com.airlinespoo.locations.repository.DatabaseConnection;
@@ -100,6 +101,9 @@ public class CountryRepository extends InMemoryRepository<Country, Short> {
             int rowsAffected = pstmt.executeUpdate();
             return rowsAffected > 0;
         } catch (SQLException e){
+            if (e.getErrorCode() == 547) {
+                throw new BusinessRuleException("No se puede eliminar el país porque tiene clientes asociados.");
+            }
             throw new RuntimeException("❌ Error al eliminar el país: " + e.getMessage());
         }
     }

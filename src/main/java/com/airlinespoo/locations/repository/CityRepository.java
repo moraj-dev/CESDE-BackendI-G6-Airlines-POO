@@ -1,6 +1,7 @@
 package com.airlinespoo.locations.repository;
 
 import com.airlinespoo.core.exception.AirlinesException;
+import com.airlinespoo.core.exception.BusinessRuleException;
 import com.airlinespoo.core.exception.NotFoundException;
 import com.airlinespoo.core.util.Validator;
 import com.airlinespoo.locations.model.City;
@@ -164,6 +165,9 @@ public class CityRepository implements ICityRepository {
 
     /** Convierte un error de SQL en una excepción del sistema, que el menú sabe mostrar. */
     private static AirlinesException databaseError(String action, SQLException e) {
+        if (e.getErrorCode() == 547) {
+            return new BusinessRuleException("No se puede eliminar la ciudad porque tiene aeropuertos asociados.");
+        }
         return new AirlinesException("Error de base de datos al " + action + ": " + e.getMessage(), e);
     }
 }

@@ -4,6 +4,7 @@ import com.airlinespoo.airlines.model.Airline;
 import com.airlinespoo.airlines.repository.AirlineJdbcRepository;
 import com.airlinespoo.airlines.repository.IAirlineRepository;
 import com.airlinespoo.core.exception.AirlinesException;
+import com.airlinespoo.core.exception.BusinessRuleException;
 import com.airlinespoo.core.exception.DuplicateException;
 import com.airlinespoo.core.util.Validator;
 import com.airlinespoo.flights.model.Flight;
@@ -143,6 +144,9 @@ public class FlightRepository {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
+            if (e.getErrorCode() == 547) {
+                throw new BusinessRuleException("No se puede eliminar el vuelo #" + id + " porque tiene reservas asociadas.");
+            }
             throw new AirlinesException("Error al eliminar el vuelo con ID " + id + ": " + e.getMessage(), e);
         }
     }
