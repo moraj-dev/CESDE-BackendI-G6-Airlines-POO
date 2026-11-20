@@ -7,19 +7,27 @@ import java.util.List;
 import java.util.Optional;
 
 public class FlightService {
-    private final FlightRepository flightRepository;
 
-    public FlightService(FlightRepository flightRepository) {
-        this.flightRepository = flightRepository;
-    }
+    private final FlightRepository flightRepository = new FlightRepository();
 
-    public Flight createFlight(Flight flight) {
-        if (flight.getOriginAirport() != null && flight.getDestinationAirport() != null) {
-            if (flight.getOriginAirport().equals(flight.getDestinationAirport())) {
-                throw new IllegalArgumentException("El aeropuerto de origen y destino no pueden ser el mismo.");
-            }
+    public void createFlight(Flight flight) {
+        if (flight == null) {
+            throw new IllegalArgumentException("El vuelo no puede ser nulo.");
         }
-        return flightRepository.save(flight);
+        if (flight.getFlightName() == null || flight.getFlightName().isBlank()) {
+            throw new IllegalArgumentException("El nombre/código del vuelo es obligatorio.");
+        }
+        if (flight.getFlightName().length() > 8) {
+            throw new IllegalArgumentException("El nombre del vuelo no puede superar 8 caracteres.");
+        }
+        if (flight.getDateDeparture() == null || flight.getDateArrival() == null) {
+            throw new IllegalArgumentException("Las fechas de salida y llegada son obligatorias.");
+        }
+        if (flight.getHourDeparture() == null || flight.getHourArrival() == null) {
+            throw new IllegalArgumentException("Las horas de salida y llegada son obligatorias.");
+        }
+
+        flightRepository.save(flight);
     }
 
     public List<Flight> getAllFlights() {

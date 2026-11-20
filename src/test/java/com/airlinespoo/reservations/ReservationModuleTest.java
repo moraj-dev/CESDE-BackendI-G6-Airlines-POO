@@ -215,14 +215,23 @@ class ReservationModuleTest {
     @Test
     @DisplayName("Integración Módulo 4: Validar vuelo existente y comparar sillas por Flight o id")
     void testIntegrationWithModule4Flights() {
-        FlightService flightService = new FlightService(new FlightRepository());
         Airport origin = new Airport(java.util.UUID.randomUUID(), "José María Córdova", new City(1, "Medellín"));
         Airport destination = new Airport(java.util.UUID.randomUUID(), "El Dorado", new City(2, "Bogotá"));
-        Flight flight101 = new Flight(101, "LA-402", origin, destination, "08:00", "09:00", 250000.0, 120);
-        flightService.createFlight(flight101);
+        java.time.LocalDate depDate = java.time.LocalDate.of(2026, 12, 1);
+        java.time.LocalTime depTime = java.time.LocalTime.of(8, 0);
+        java.time.LocalDate arrDate = java.time.LocalDate.of(2026, 12, 1);
+        java.time.LocalTime arrTime = java.time.LocalTime.of(9, 0);
+
+        Flight flight101 = new Flight(101, "LA-402", origin, destination, depDate, depTime, arrDate, arrTime);
+        FlightService flightService = new FlightService() {
+            @Override
+            public Optional<Flight> getFlightById(int id) {
+                return id == 101 ? Optional.of(flight101) : Optional.empty();
+            }
+        };
 
         ReservationService integratedService = new ReservationService(
-                repository, customerService, flightService, new IdGenerator(1, 1), new IdGenerator(1, 1));
+            repository, customerService, flightService, new IdGenerator(1, 1), new IdGenerator(1, 1));
 
         Seat seat3A = new Seat("3", 1);
         Reservation created = integratedService.createReservation("101010", 101, "Ana Pérez", "101010", seat3A);
@@ -230,12 +239,12 @@ class ReservationModuleTest {
         assertInstanceOf(Flight.class, created.getFlight());
         assertEquals(101, ((Flight) created.getFlight()).getId());
 
-        Flight anotherFlightCopy = new Flight(101, "LA-402", origin, destination, "08:00", "09:00", 250000.0, 120);
+        Flight anotherFlightCopy = new Flight(101, "LA-402", origin, destination, depDate, depTime, arrDate, arrTime);
         assertTrue(integratedService.isSeatOccupied(101, seat3A));
         assertTrue(integratedService.isSeatOccupied(anotherFlightCopy, seat3A));
 
         assertThrows(NotFoundException.class, () ->
-                integratedService.createReservation("101010", 999, "Ana Pérez", "101010", new Seat("4", 1))
+            integratedService.createReservation("101010", 999, "Ana Pérez", "101010", new Seat("4", 1))
         );
     }
 

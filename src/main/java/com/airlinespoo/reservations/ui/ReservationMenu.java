@@ -282,7 +282,8 @@ public class ReservationMenu implements Menu {
 
     private static String formatFlight(Object flightObj) {
         if (flightObj instanceof Flight flight) {
-            String number = flight.getFlightNumber();
+            String number = flight.getFlightName();
+
             return (number != null && !number.isBlank())
                     ? "#%d (%s)".formatted(flight.getId(), number)
                     : "#" + flight.getId();
