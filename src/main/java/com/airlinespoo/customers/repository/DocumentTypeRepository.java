@@ -1,5 +1,6 @@
 package com.airlinespoo.customers.repository;
 
+import com.airlinespoo.core.exception.BusinessRuleException;
 import com.airlinespoo.core.repository.InMemoryRepository;
 import com.airlinespoo.customers.model.DocumentType;
 import com.airlinespoo.locations.repository.DatabaseConnection;
@@ -101,6 +102,9 @@ public class DocumentTypeRepository extends InMemoryRepository<DocumentType, Str
             return (rowsAffected > 0);
 
         } catch (SQLException e){
+            if (e.getErrorCode() == 547) {
+                throw new BusinessRuleException("No se puede eliminar el tipo de documento porque tiene clientes asociados.");
+            }
             throw new RuntimeException("❌ Error al eliminar tipo de documento " + e.getMessage());
         }
     }
