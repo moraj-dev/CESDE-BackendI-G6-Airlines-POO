@@ -30,18 +30,28 @@ public class MainMenu implements Menu {
         while (!exit) {
             System.out.println();
             System.out.println("=================================================");
-            System.out.println("            AIRLINES-POO · MENÚ PRINCIPAL        ");
+            System.out.println("          AIRLINES-POO · MENÚ PRINCIPAL          ");
             System.out.println("=================================================");
+            System.out.println();
             for (int i = 0; i < modules.size(); i++) {
-                System.out.printf("%d. %s%n", i + 1, modules.get(i).title());
+                System.out.printf("  %d. %s%n", i + 1, modules.get(i).title());
             }
-            System.out.println("0. Salir");
+            System.out.println("-------------------------------------------------");
+            System.out.println("  0. Salir");
+            System.out.println("=================================================");
 
             int option = input.readInt("Seleccione un módulo", 0, modules.size());
             if (option == 0) {
                 exit = true;
             } else {
-                modules.get(option - 1).run();
+                Menu selected = modules.get(option - 1);
+                System.out.println();
+                System.out.println("-------------------------------------------------");
+                System.out.println("  >>> Ingresando a: " + selected.title());
+                System.out.println("-------------------------------------------------");
+                System.out.println();
+                selected.run();
+                System.out.println();
             }
         }
     }
