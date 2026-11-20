@@ -1,9 +1,11 @@
 package com.airlinespoo.flights.model;
 
+import com.airlinespoo.airlines.model.Airline;
 import com.airlinespoo.locations.model.Airport;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Objects;
 
 public class Flight {
     private int flightId;
@@ -14,10 +16,31 @@ public class Flight {
     private LocalTime hourDeparture;
     private LocalDate dateArrival;
     private LocalTime hourArrival;
+    private Airline airline;
     private Integer airlineId;
     private String airlineName;
 
     public Flight() {
+    }
+
+    public Flight(int flightId,
+                  String flightName,
+                  Airport departure,
+                  Airport arrival,
+                  LocalDate dateDeparture,
+                  LocalTime hourDeparture,
+                  LocalDate dateArrival,
+                  LocalTime hourArrival,
+                  Airline airline) {
+        this.flightId = flightId;
+        this.flightName = flightName;
+        this.departure = departure;
+        this.arrival = arrival;
+        this.dateDeparture = dateDeparture;
+        this.hourDeparture = hourDeparture;
+        this.dateArrival = dateArrival;
+        this.hourArrival = hourArrival;
+        setAirline(airline);
     }
 
     public Flight(int flightId,
@@ -157,8 +180,20 @@ public class Flight {
         this.hourArrival = hourArrival;
     }
 
+    public Airline getAirline() {
+        return airline;
+    }
+
+    public void setAirline(Airline airline) {
+        this.airline = airline;
+        if (airline != null) {
+            this.airlineId = airline.getId();
+            this.airlineName = airline.getName();
+        }
+    }
+
     public Integer getAirlineId() {
-        return airlineId;
+        return airline != null ? airline.getId() : airlineId;
     }
 
     public void setAirlineId(Integer airlineId) {
@@ -166,7 +201,7 @@ public class Flight {
     }
 
     public String getAirlineName() {
-        return airlineName;
+        return airline != null ? airline.getName() : airlineName;
     }
 
     public void setAirlineName(String airlineName) {
@@ -174,18 +209,29 @@ public class Flight {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Flight other)) return false;
+        return flightId > 0 && flightId == other.flightId;
+    }
+
+    @Override
+    public int hashCode() {
+        return Integer.hashCode(flightId);
+    }
+
+    @Override
     public String toString() {
         return "Flight{" +
             "flightId=" + flightId +
             ", flightName='" + flightName + '\'' +
-            ", departure=" + departure +
-            ", arrival=" + arrival +
+            ", departure=" + (departure != null ? departure.getName() : "null") +
+            ", arrival=" + (arrival != null ? arrival.getName() : "null") +
             ", dateDeparture=" + dateDeparture +
             ", hourDeparture=" + hourDeparture +
             ", dateArrival=" + dateArrival +
             ", hourArrival=" + hourArrival +
-            ", airlineId=" + airlineId +
-            ", airlineName='" + airlineName + '\'' +
+            ", airline=" + (airline != null ? airline.getName() : airlineName) +
             '}';
     }
 }
