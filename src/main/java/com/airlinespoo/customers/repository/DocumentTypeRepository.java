@@ -2,6 +2,7 @@ package com.airlinespoo.customers.repository;
 
 import com.airlinespoo.core.repository.InMemoryRepository;
 import com.airlinespoo.customers.model.DocumentType;
+import com.airlinespoo.locations.repository.DatabaseConnection;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,10 +12,7 @@ public class DocumentTypeRepository extends InMemoryRepository<DocumentType, Str
 
     // Metodo para la conexión a la base de datos
     private Connection getConnection() throws SQLException {
-        String url = "jdbc:sqlserver://localhost:1433;databaseName=AerolinesPoo;encrypt=false";
-        String username = "aerolinea";
-        String password = "java&basededatosg6";
-        return DriverManager.getConnection(url, username, password);
+        return DatabaseConnection.getConnection();
     }
 
     //Como en Country, hereda el mapa CRUD básico

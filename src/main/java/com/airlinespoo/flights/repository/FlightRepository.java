@@ -1,15 +1,23 @@
 package com.airlinespoo.flights.repository;
 
+import com.airlinespoo.airlines.model.Airline;
+import com.airlinespoo.airlines.repository.AirlineJdbcRepository;
+import com.airlinespoo.airlines.repository.IAirlineRepository;
+import com.airlinespoo.core.exception.AirlinesException;
+import com.airlinespoo.core.exception.DuplicateException;
+import com.airlinespoo.core.util.Validator;
 import com.airlinespoo.flights.model.Flight;
 import com.airlinespoo.locations.model.Airport;
+import com.airlinespoo.locations.repository.AirportRepository;
 import com.airlinespoo.locations.repository.DatabaseConnection;
+import com.airlinespoo.locations.repository.IAirportRepository;
 
-import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -17,7 +25,29 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Repositorio JDBC de vuelos en SQL Server (tabla {@code dbo.tblFlights}).
+ */
 public class FlightRepository {
+
+    private static final int SQL_UNIQUE_VIOLATION_1 = 2627;
+    private static final int SQL_UNIQUE_VIOLATION_2 = 2601;
+
+    private static final String BASE_SELECT = """
+            SELECT
+                f.FlightId,
+                f.FlightName,
+                f.Departure,
+                f.Arrival,
+                f.DateDeparture,
+                f.HourDeparture,
+                f.DateArrival,
+                f.HourArrival,
+                f.AirlineId,
+                a.name AS AirlineName
+            FROM dbo.tblFlights f
+            LEFT JOIN dbo.tblAirlines a ON f.AirlineId = a.airlineId
+            """;
 
     private static final String INSERT_FLIGHT_SQL = """
             INSERT INTO dbo.tblFlights (
@@ -32,130 +62,106 @@ public class FlightRepository {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
-    private static final String SELECT_ALL_FLIGHTS_SQL = """
-            SELECT
-                f.FlightId,
-                f.FlightName,
-                f.Departure,
-                f.Arrival,
-                f.DateDeparture,
-                f.HourDeparture,
-                f.DateArrival,
-                f.HourArrival,
-                f.AirlineId,
-                a.name AS AirlineName
-            FROM dbo.tblFlights f
-            LEFT JOIN dbo.tblAirlines a ON f.AirlineId = a.airlineId
-            ORDER BY f.FlightId DESC
-            """;
+    private final IAirportRepository airportRepository;
+    private final IAirlineRepository airlineRepository;
 
-    private static final String SELECT_FLIGHT_BY_ID_SQL = """
-            SELECT
-                f.FlightId,
-                f.FlightName,
-                f.Departure,
-                f.Arrival,
-                f.DateDeparture,
-                f.HourDeparture,
-                f.DateArrival,
-                f.HourArrival,
-                f.AirlineId,
-                a.name AS AirlineName
-            FROM dbo.tblFlights f
-            LEFT JOIN dbo.tblAirlines a ON f.AirlineId = a.airlineId
-            WHERE f.FlightId = ?
-            """;
+    public FlightRepository() {
+        this(new AirportRepository(), new AirlineJdbcRepository());
+    }
 
-    private static final String DELETE_FLIGHT_BY_ID_SQL = """
-            DELETE FROM dbo.tblFlights
-            WHERE FlightId = ?
-            """;
+    public FlightRepository(IAirportRepository airportRepository, IAirlineRepository airlineRepository) {
+        this.airportRepository = Validator.requireNotNull(airportRepository, "repositorio de aeropuertos");
+        this.airlineRepository = Validator.requireNotNull(airlineRepository, "repositorio de aerolíneas");
+    }
 
-    public void save(Flight flight) {
-        if (flight == null) {
-            throw new IllegalArgumentException("El vuelo no puede ser nulo.");
-        }
+    public Flight save(Flight flight) {
+        Validator.requireNotNull(flight, "vuelo");
 
-        UUID departureUuid = extractAirportUuid(flight.getDeparture());
-        UUID arrivalUuid = extractAirportUuid(flight.getArrival());
+        UUID departureUuid = flight.getDeparture() != null ? flight.getDeparture().getId() : null;
+        UUID arrivalUuid = flight.getArrival() != null ? flight.getArrival().getId() : null;
+        Integer airlineId = flight.getAirlineId();
 
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(INSERT_FLIGHT_SQL)) {
+             PreparedStatement ps = conn.prepareStatement(INSERT_FLIGHT_SQL, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setString(1, flight.getFlightName());
-
-            if (departureUuid != null) {
-                ps.setString(2, departureUuid.toString());
-            } else {
-                ps.setNull(2, Types.VARCHAR);
-            }
-
-            if (arrivalUuid != null) {
-                ps.setString(3, arrivalUuid.toString());
-            } else {
-                ps.setNull(3, Types.VARCHAR);
-            }
-
+            setUuid(ps, 2, departureUuid);
+            setUuid(ps, 3, arrivalUuid);
             ps.setDate(4, flight.getDateDeparture() != null ? Date.valueOf(flight.getDateDeparture()) : null);
             ps.setTime(5, flight.getHourDeparture() != null ? Time.valueOf(flight.getHourDeparture()) : null);
             ps.setDate(6, flight.getDateArrival() != null ? Date.valueOf(flight.getDateArrival()) : null);
             ps.setTime(7, flight.getHourArrival() != null ? Time.valueOf(flight.getHourArrival()) : null);
 
-            if (flight.getAirlineId() != null) {
-                ps.setInt(8, flight.getAirlineId());
+            if (airlineId != null) {
+                ps.setInt(8, airlineId);
             } else {
                 ps.setNull(8, Types.INTEGER);
             }
 
             ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    flight.setFlightId(keys.getInt(1));
+                }
+            }
+            return flight;
         } catch (SQLException e) {
-            throw new RuntimeException("Error al guardar el vuelo en dbo.tblFlights: " + e.getMessage(), e);
+            if (e.getErrorCode() == SQL_UNIQUE_VIOLATION_1 || e.getErrorCode() == SQL_UNIQUE_VIOLATION_2) {
+                throw new DuplicateException("Ya existe un vuelo con el código '" + flight.getFlightName() + "'.");
+            }
+            throw new AirlinesException("Error al guardar el vuelo en dbo.tblFlights: " + e.getMessage(), e);
         }
     }
 
     public List<Flight> findAll() {
-        List<Flight> flights = new ArrayList<>();
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SELECT_ALL_FLIGHTS_SQL);
-             ResultSet rs = ps.executeQuery()) {
-
-            while (rs.next()) {
-                flights.add(mapRowToFlight(rs));
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Error al consultar los vuelos en dbo.tblFlights: " + e.getMessage(), e);
-        }
-
-        return flights;
+        return query(BASE_SELECT + " ORDER BY f.FlightId DESC");
     }
 
     public Optional<Flight> findById(int id) {
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SELECT_FLIGHT_BY_ID_SQL)) {
+        return query(BASE_SELECT + " WHERE f.FlightId = ?", id).stream().findFirst();
+    }
 
-            ps.setInt(1, id);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(mapRowToFlight(rs));
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Error al buscar el vuelo con ID " + id + ": " + e.getMessage(), e);
+    public Optional<Flight> findByFlightName(String flightName) {
+        String clean = Validator.normalize(flightName);
+        if (clean == null) {
+            return Optional.empty();
         }
+        return query(BASE_SELECT + " WHERE LOWER(f.FlightName) = LOWER(?)", clean).stream().findFirst();
+    }
 
-        return Optional.empty();
+    public List<Flight> findByAirlineAndMonth(int airlineId, int year, int month) {
+        String sql = BASE_SELECT
+                + " WHERE f.AirlineId = ? AND YEAR(f.DateDeparture) = ? AND MONTH(f.DateDeparture) = ?"
+                + " ORDER BY f.DateDeparture, f.HourDeparture";
+        return query(sql, airlineId, year, month);
     }
 
     public boolean delete(int id) {
+        String sql = "DELETE FROM dbo.tblFlights WHERE FlightId = ?";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(DELETE_FLIGHT_BY_ID_SQL)) {
-
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            throw new RuntimeException("Error al eliminar el vuelo con ID " + id + ": " + e.getMessage(), e);
+            throw new AirlinesException("Error al eliminar el vuelo con ID " + id + ": " + e.getMessage(), e);
+        }
+    }
+
+    private List<Flight> query(String sql, Object... params) {
+        List<Flight> flights = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < params.length; i++) {
+                ps.setObject(i + 1, params[i]);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    flights.add(mapRowToFlight(rs));
+                }
+            }
+            return flights;
+        } catch (SQLException e) {
+            throw new AirlinesException("Error al consultar los vuelos en dbo.tblFlights: " + e.getMessage(), e);
         }
     }
 
@@ -163,6 +169,9 @@ public class FlightRepository {
         Flight flight = new Flight();
         flight.setFlightId(rs.getInt("FlightId"));
         flight.setFlightName(rs.getString("FlightName"));
+
+        flight.setDeparture(resolveAirport(rs.getString("Departure")));
+        flight.setArrival(resolveAirport(rs.getString("Arrival")));
 
         Date dateDeparture = rs.getDate("DateDeparture");
         Time hourDeparture = rs.getTime("HourDeparture");
@@ -175,29 +184,34 @@ public class FlightRepository {
         flight.setHourArrival(hourArrival != null ? hourArrival.toLocalTime() : null);
 
         int airlineId = rs.getInt("AirlineId");
-        flight.setAirlineId(rs.wasNull() ? null : airlineId);
-        flight.setAirlineName(rs.getString("AirlineName"));
+        if (!rs.wasNull()) {
+            String airlineName = rs.getString("AirlineName");
+            Airline airline = airlineRepository.findById(airlineId)
+                    .orElseGet(() -> airlineName != null ? new Airline(airlineId, airlineName) : null);
+            if (airline != null) {
+                flight.setAirline(airline);
+            } else {
+                flight.setAirlineId(airlineId);
+                flight.setAirlineName(airlineName);
+            }
+        }
 
         return flight;
     }
 
-    private UUID extractAirportUuid(Airport airport) {
-        if (airport == null) {
+    private Airport resolveAirport(String rawUuid) {
+        if (rawUuid == null || rawUuid.isBlank()) {
             return null;
         }
-        for (String methodName : List.of("getAirportId", "getId", "getUuid")) {
-            try {
-                Method m = airport.getClass().getMethod(methodName);
-                Object val = m.invoke(airport);
-                if (val instanceof UUID uuid) {
-                    return uuid;
-                }
-                if (val != null && !val.toString().isBlank()) {
-                    return UUID.fromString(val.toString().trim());
-                }
-            } catch (Exception ignored) {
-            }
+        UUID uuid = UUID.fromString(rawUuid.trim());
+        return airportRepository.findById(uuid).orElse(null);
+    }
+
+    private static void setUuid(PreparedStatement ps, int index, UUID uuid) throws SQLException {
+        if (uuid != null) {
+            ps.setString(index, uuid.toString());
+        } else {
+            ps.setNull(index, Types.VARCHAR);
         }
-        return null;
     }
 }

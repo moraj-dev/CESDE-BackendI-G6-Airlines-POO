@@ -4,6 +4,7 @@ import com.airlinespoo.core.repository.InMemoryRepository;
 import com.airlinespoo.customers.model.Customer;
 import com.airlinespoo.customers.model.Country;
 import com.airlinespoo.customers.model.DocumentType;
+import com.airlinespoo.locations.repository.DatabaseConnection;
 import java.sql.*;
 import java.util.List;
 import java.util.ArrayList;
@@ -13,10 +14,7 @@ public class CustomerRepository extends InMemoryRepository<Customer,String> {
 
     //Metodo de conexión a la base de datos
     private Connection getConnection() throws SQLException {
-        String url = "jdbc:sqlserver://localhost:1433;databaseName=AerolinesPoo;encrypt=false";
-        String username = "aerolinea";
-        String password = "java&basededatosg6";
-        return DriverManager.getConnection(url, username, password);
+        return DatabaseConnection.getConnection();
     }
 
     @Override
